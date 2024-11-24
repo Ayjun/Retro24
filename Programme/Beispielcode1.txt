@@ -1,0 +1,36 @@
+; Summe der Zahlen von 1 bis 10 ausrechnen,
+; Ergebnis steht am Ende im Speicher an Adresse $0115.
+
+.base $0100               ; Fester Programmstart nach Reset
+
+          MR0, $00        ; Initialisiert R1
+          C01             ;   mit dem Wert 0
+          MR0, $0A        ; Endzahl 10 in R0, werden absteigend addieren
+start:    A01             ; Summand R0 auf die Summe in R1 addieren
+          DR0             ; n�chster Summand: R0 um eins erniedrigen
+          MAR, end        ; ans Ende springen,
+          JZ0             ;   falls Summand 0 ist
+          MAR, start      ; anderenfalls an den Start
+          JMP             ;   springen
+
+end:      X01             ; abschlie�end das Resultat aus R1
+          MAR, result     ;   �ber R0
+          SR0             ;   an die vereinbarte Adresse schreiben
+          HLT             ; Programm endet
+result:   DAT $AA
+
+
+; 17 00         <- MR0 ($17, 2-Byte-OP): Das nachfolgende Byte wird nach R0 geschrieben.
+; 25            <- C01 ($25, 1-Byte-OP): Kopiert R0 nach R1.
+; 17 0A         <- MR0 ($17, 2-Byte-OP): Das nachfolgende Byte wird nach R0 geschrieben.
+; 06            <- A01 ($06, 1-Byte-OP): Addiert R0 auf R1. Bei Überlauf wird R2 um 1 erhöht. Läuft dabei wiederum R2 über, werden R1 und R2 zu $FF.
+; 07            <- DR0 ($07, 1-Byte-OP): Erniedrigt den Wert von R0 um 1, allerdings nicht unter $00.
+; 01 0F 01      <- MAR ($01, 3-Byte-OP): Lädt AR mit den nächsten beiden Bytes.
+; 19            <- JZ0 ($19, 1-Byte-OP): Springt zu der in AR angegebenen Adresse, falls R0=$00 ist.
+: 01 05 01      <- MAR ($01, 3-Byte-OP): Lädt AR mit den nächsten beiden Bytes.
+; 11            <- JMP ($11, 1-Byte-OP): Springt zu der in AR angegebenen Adresse.
+; 10            <- X01 ($10, 1-Byte-OP): Vertauscht die Inhalte von R0 und R1.
+; 01 15 01      <- MAR ($01, 3-Byte-OP): Lädt AR mit den nächsten beiden Bytes.
+; 12            <- SR0 ($12, 1-Byte-OP): Speichert R0 an die in AR angegebene Adresse.
+; FF            <- HLT ($FF, 1-Byte-OP): Prozessor hält an.
+; AA ???
