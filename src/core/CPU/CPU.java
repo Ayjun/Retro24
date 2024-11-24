@@ -2,6 +2,10 @@ package core.CPU;
 
 import core.Retro24;
 
+/**
+ * Repräsentation einer fiktiven Retro24 CPU
+ * @author Eric Schneider
+ */
 public class CPU {
 	// CPU-Register:
 	private byte R0;

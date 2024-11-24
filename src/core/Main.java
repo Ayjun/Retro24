@@ -3,7 +3,10 @@ package core;
 import java.util.Scanner;
 
 import core.CPU.CPU;
-
+/**
+ * Main Klasse, existiert aktuell hauptsächlich zu Test- und Debugzwecken.
+ * @author Eric Schneider
+ */
 public class Main {
     public static void main(String[] args) {
         // Erstelle eine Instanz des Retro24-Systems
@@ -23,7 +26,11 @@ public class Main {
         
     }
     
-    // Lässt die CPU endlos laufen bis sie angehalten wird.
+    /**
+     * Lässt die CPU endlos laufen (bis zum Haltebefehl)
+     * @param cpu die CPU welche laufen soll
+     * @param hz die CPU Frequenz (Takt)
+     */
     private static void run(CPU cpu, int hz) {
     	long instructionCount = 1;
     	long startTime = System.nanoTime();
@@ -56,7 +63,12 @@ public class Main {
         System.out.println("Instruction counter: " + instructionCount);
     }
     
-    // Lässt die CPU endlos laufen bis sie angehalten wird (einzelne Anweisung pro Tastendruck).
+    /**
+     * Lässt die CPU endlos laufen (bis zum Haltebefehl),
+     * wobei jede Instruktion einzeln ausgeführt und dann auf Eingabe gewartet wird
+     * um den Verlauf nachvollziehen zu können (debugging).
+     * @param cpu die CPU welche laufen soll
+     */
     private static void debug(CPU cpu) {
     	Scanner scan = new Scanner(System.in);
     	printRegisterState(cpu);   // Zeige Register nach der Ausführung
@@ -74,7 +86,10 @@ public class Main {
         scan.close();
     }
 
-    // Hilfsmethode, um den aktuellen Zustand der Register und des Programms auszugeben
+    /**
+     * Gibt die Registerinhalte der cpu auf der Konsole aus
+     * @param cpu
+     */
     private static void printRegisterState(CPU cpu) {
         System.out.println("Registerinhalt:");
         System.out.println("R0: " + String.format("0x%02X", cpu.getR0()));
@@ -86,7 +101,10 @@ public class Main {
         System.out.println("########################");
     }
     
-    // Hilfsmethode, um die Details des letzten Opcodes auszugeben
+    /**
+     * Gibt die Details des zuletzt ausgeführten Opcodes der cpu auf der Konsole aus
+     * @param cpu
+     */
     private static void printLastOpcode(CPU cpu) {
     	System.out.println("Letzter Opcode:");
     	System.out.println("Opcode:	" + String.format("0x%02X", cpu.getLastOpcode()));
@@ -115,7 +133,12 @@ public class Main {
     	
     }
     
-    // Methode, um einen bestimmten Bereich des Speichers auszugeben
+    /**
+     *  Methode, um einen bestimmten Bereich des Speichers auszugeben
+     * @param retro24
+     * @param from Startspeicheradresse
+     * @param to Endpeicheradresse
+     */
     private static void dumpMemory(Retro24 retro24, short from, short to) {
         // Umwandlung von short zu unsigned int durch Bitmaskierung
         int uFrom = from & 0xFFFF; // Maske für die unteren 16 Bits (von 0 bis 65535)

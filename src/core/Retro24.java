@@ -7,6 +7,10 @@ import java.io.IOException;
 
 import core.CPU.CPU;
 
+/**
+ * Repräsentation des emulierten Retro24 Systems und seinen Komponenten
+ * @author Eric Schneider
+ */
 public class Retro24 {
 	
 	private byte[] memory;
