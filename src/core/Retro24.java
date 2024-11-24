@@ -12,10 +12,10 @@ import core.CPU.CPU;
  * @author Eric Schneider
  */
 public class Retro24 {
-	
+
 	private byte[] memory;
 	private CPU cpu;
-	
+
 	/**
 	 * Initialisert das System und alle Komponenten
 	 */
@@ -29,8 +29,8 @@ public class Retro24 {
 		for (int i = 0x0100; i <= 0xDFFF; i++) {
 			memory[i] = (byte)0xFF;
 		}
-		
-		
+
+
 		cpu = new CPU(this);
 		cpu.initCPU();
 	}
@@ -48,7 +48,7 @@ public class Retro24 {
         }
         return memory[uAddress];
     }
-    
+
     /**
      * Schreibt ein Byte in den Speicher an die gegebene Adresse.
      * @overload Fuer addressen in short Form
@@ -63,7 +63,7 @@ public class Retro24 {
         }
         memory[uAddress] = value;
     }
-    
+
     /**
      * Schreibt ein Byte in den Speicher an die gegebene Adresse.
      * @overload Fuer addressen in int Form
@@ -78,12 +78,12 @@ public class Retro24 {
         }
         memory[address] = value;
     }
-    
+
     /**
      * Lädt ein Programm von einem angegebenen Dateipfad in den Speicher des Retro24,
      * die erste Adresse ist hierbei 0x0100 (Programmstartadresse im Programmspeicher)
      * @param path
-     * @throws IOException 
+     * @throws IOException
      */
     public void loadProgramm(String path) {
     	byte[] programm = null;
@@ -101,10 +101,10 @@ public class Retro24 {
 			e.printStackTrace();
 			System.err.println("Fehler beim Lesen der Datei: " + path);
 		}
-		
+
     	loadProgramm(programm);
     }
-    
+
     /**
      * Lädt ein Programm aus einem Bytearray in den Speicher des Retro24,
      * die erste Adresse ist hierbei 0x0100 (Programmstartadresse im Programmspeicher)
@@ -115,14 +115,14 @@ public class Retro24 {
         	writeMemory(i, programm[j]);
         }
     }
-    
-    
+
+
     /**
      * @return die CPU der Retro24 Instanz
      */
     public CPU getCPU() {
     	return cpu;
     }
-    
-    
+
+
 }

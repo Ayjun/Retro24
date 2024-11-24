@@ -14,7 +14,7 @@ public class Main {
 
         // Initialisiere das Retro24-System
         retro24.initialize();
-        
+
         // Programm laden:
         retro24.loadProgramm("./Programme/addiereZahlen7bis77.bin");
 
@@ -23,9 +23,9 @@ public class Main {
         dumpMemory(retro24, (short)0x0100, (short)0x01FF);
         run(cpu, 100);
         dumpMemory(retro24, (short) 0x0100, (short) 0x01FF);
-        
+
     }
-    
+
     /**
      * Lässt die CPU endlos laufen (bis zum Haltebefehl)
      * @param cpu die CPU welche laufen soll
@@ -53,7 +53,7 @@ public class Main {
     	}
         printLastOpcode(cpu);		// Zeige zuletzt ausgeführten Opcode
         printRegisterState(cpu);   // Zeige Register nach der Ausführung
-        
+
         // Record the end time
         long endTime = System.nanoTime();
 
@@ -62,7 +62,7 @@ public class Main {
         System.out.println("Elapsed Time: " + elapsedTimeMillis + " ms");
         System.out.println("Instruction counter: " + instructionCount);
     }
-    
+
     /**
      * Lässt die CPU endlos laufen (bis zum Haltebefehl),
      * wobei jede Instruktion einzeln ausgeführt und dann auf Eingabe gewartet wird
@@ -82,7 +82,7 @@ public class Main {
     	}
         printLastOpcode(cpu);		// Zeige zuletzt ausgeführten Opcode
         printRegisterState(cpu);   // Zeige Register nach der Ausführung
-        
+
         scan.close();
     }
 
@@ -100,7 +100,7 @@ public class Main {
         System.out.println("AR: " + String.format("0x%04X", cpu.getAR()));
         System.out.println("########################");
     }
-    
+
     /**
      * Gibt die Details des zuletzt ausgeführten Opcodes der cpu auf der Konsole aus
      * @param cpu
@@ -109,9 +109,9 @@ public class Main {
     	System.out.println("Letzter Opcode:");
     	System.out.println("Opcode:	" + String.format("0x%02X", cpu.getLastOpcode()));
     	System.out.print  ("Args:	");
-    	
+
     	String args = "";
-    	
+
     	if (cpu.getLastOpcodeArgs().length == 0) {
     		System.out.println("keine");
     	}
@@ -130,9 +130,9 @@ public class Main {
     	System.out.println("Len:	" + cpu.getlastOpcodeLen() + " Byte");
     	System.out.println(cpu.getLastAssembler() + " " + args);
     	System.out.println("------------------------");
-    	
+
     }
-    
+
     /**
      *  Methode, um einen bestimmten Bereich des Speichers auszugeben
      * @param retro24
@@ -166,5 +166,5 @@ public class Main {
         }
     }
 
-    
+
 }
