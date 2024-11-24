@@ -94,7 +94,7 @@ public class Main {
     	
     	String args = "";
     	
-    	if (cpu.getLastOpcodeArgs() == null) {
+    	if (cpu.getLastOpcodeArgs().length == 0) {
     		System.out.println("keine");
     	}
     	else {

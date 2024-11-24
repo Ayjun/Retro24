@@ -60,12 +60,8 @@ public class CPU {
         	// NUL ($00, 1-Byte-OP): Prozessor tut nichts
         	case 0x00:
         		
-        		lastOpcode = 0x00;
-        		lastOpcodeArgs = null;
-        		lastOpcodeLen = 1;
-        		lastAssembler = "NUL";
+        		updateCPU("NUL", 0x01, 1, new byte[0]); 
         		
-        		IC += 1;
         		break;
         	
         	// MAR ($01, 3-Byte-OP): Lädt AR mit den nächsten beiden Bytes.
@@ -75,31 +71,23 @@ public class CPU {
         		// Kombinieren der beiden Bytes zu einem 16-Bit Wert
         	    short address = (short) (((highByte & 0xFF) << 8) | (lowByte & 0xFF));
         	    AR = address;
+  
+        	    updateCPU("MAR", 0x01, 3, new byte[] {lowByte, highByte}); 
         	    
-        	    lastOpcode = 0x01;
-        		lastOpcodeArgs = new byte[] {lowByte, highByte};
-        		lastOpcodeLen = 3;
-        		lastAssembler = "MAR";
-        		
-        	    IC += 3;
         	    break;
         	
         	// SIC ($02, 1-Byte-OP): Speichert IC an die im AR angegebene Adresse.
         	case 0x02:
         		int lowByteI = IC & 0xFF;
-        		int highByteI = IC >> 8 & 0xFF;
+        		int highByteI = IC >>> 8 & 0xFF;
         	    lowByte = (byte)lowByteI;
         	    highByte = (byte)highByteI;
         		
         		retro24.writeMemory(AR, lowByte);
         		retro24.writeMemory(AR+1, highByte);
         		
-        		lastOpcode = 0x02;
-        		lastOpcodeArgs = null;
-        		lastOpcodeLen = 1;
-        		lastAssembler = "SIC";
+        		updateCPU("SIC", 0x02, 1, new byte[0]); 
         		
-        		IC += 1;
         		break;
         	
         	// Ich gehe davon aus es ist gemeint R1 gefolgt von R2 sollen der Inhalt fuer AR werden?
@@ -113,12 +101,8 @@ public class CPU {
         		
         		AR = newAR;
         		
-        		lastOpcode = 0x03;
-        		lastOpcodeArgs = null;
-        		lastOpcodeLen = 1;
-        		lastAssembler = "RAR";
+        		updateCPU("RAR", 0x03, 1, new byte[0]); 
         		
-        		IC += 1;
         		break;
         		
         	// AAR ($04, 1-Byte-OP): Addiert R0 aufs AR, bei Überlauf geht Übertrag verloren.
@@ -127,12 +111,8 @@ public class CPU {
         		int iAR = AR & 0xFFFF;
         		AR = (short) ((iAR + iR0) & 0xFFFF);
         		
-        		lastOpcode = 0x04;
-        		lastOpcodeArgs = null;
-        		lastOpcodeLen = 1;
-        		lastAssembler = "AAR";
+        		updateCPU("AAR", 0x04, 1, new byte[0]); 
         		
-        		IC += 1;
         		break;
         	
         	// IR0 ($05, 1-Byte-OP): Erhöht den Wert von R0 um 1, allerdings nicht über $FF hinaus
@@ -142,12 +122,8 @@ public class CPU {
         			R0 += 1;
         		}
         		
-        		lastOpcode = 0x05;
-        		lastOpcodeArgs = null;
-        		lastOpcodeLen = 1;
-        		lastAssembler = "IR0";
+        		updateCPU("IR0", 0x05, 1, new byte[0]);
         		
-        		IC += 1;
         		break;
    
         		
@@ -175,12 +151,8 @@ public class CPU {
 			        R1 = (byte) ((uR1 + uR0) & 0xFF);
 			    }
 	
-			    lastOpcode = 0x06;
-			    lastOpcodeArgs = null;
-			    lastOpcodeLen = 1;
-			    lastAssembler = "A01";
-	
-			    IC += 1;
+			    updateCPU("A01", 0x06, 1, new byte[0]); 
+			    
 			    break;
 
         	//DR0 ($07, 1-Byte-OP): Erniedrigt den Wert von R0 um 1, allerdings nicht unter $00.
@@ -189,12 +161,8 @@ public class CPU {
         			R0 -= 1;
         		}
         		
-        		lastOpcode = 0x07;
-        		lastOpcodeArgs = null;
-        		lastOpcodeLen = 1;
-        		lastAssembler = "DR0";
+        		updateCPU("DR0", 0x07, 1, new byte[0]); 
         		
-        		IC += 1;
         		break;
         	
     		// S01 ($08, 1-Byte-OP): Subtrahiert R0 von R1. Falls eine negative Zahl
@@ -221,12 +189,8 @@ public class CPU {
         			}
         		}
         		
-        		lastOpcode = 0x08;
-        		lastOpcodeArgs = null;
-        		lastOpcodeLen = 1;
-        		lastAssembler = "S01";
+        		updateCPU("S01", 0x08, 1, new byte[0]); 
         		
-        		IC += 1;
         		break;
         	
         	// X12 ($09, 1-Byte-OP): Vertauscht die Inhalte von R1 und R2.
@@ -237,12 +201,8 @@ public class CPU {
         		R1 = R2Old;
         		R2 = R1Old;
         		
-        		lastOpcode = 0x09;
-        		lastOpcodeArgs = null;
-        		lastOpcodeLen = 1;
-        		lastAssembler = "X12";
+        		updateCPU("X12", 0x09, 1, new byte[0]); 
         		
-        		IC += 1;
         		break;
         	
         	// X01 ($10, 1-Byte-OP): Vertauscht die Inhalte von R0 und R1.
@@ -253,22 +213,15 @@ public class CPU {
         		R0 = R1Old;
         		R1 = R0Old;
         		
-        		lastOpcode = 0x10;
-        		lastOpcodeArgs = null;
-        		lastOpcodeLen = 1;
-        		lastAssembler = "X01";
+        		updateCPU("X01", 0x10, 1, new byte[0]); 
         		
-        		IC += 1;
         		break;
         	
         	// JMP ($11, 1-Byte-OP): Springt zu der in AR angegebenen Adresse.
         	case 0x11:
-        		lastOpcode = 0x11;
-        		lastOpcodeArgs = null;
-        		lastOpcodeLen = 1;
-        		lastAssembler = "JMP";
-
-        	
+        		
+        		updateCPU("JMP", 0x11, 1, new byte[0]); 
+        		
         		IC = AR;
         		
         		break;
@@ -277,12 +230,7 @@ public class CPU {
         	case 0x12:
         		retro24.writeMemory(AR, R0);
         		
-        		lastOpcode = 0x12;
-        		lastOpcodeArgs = null;
-        		lastOpcodeLen = 1;
-        		lastAssembler = "SR0";
-        		
-        		IC += 1;
+        		updateCPU("SR0", 0x12, 1, new byte[0]); 
         		
         		break;
         		
@@ -291,12 +239,7 @@ public class CPU {
         		retro24.writeMemory(AR, R1);
         		retro24.writeMemory(AR + 1, R2);
         		
-        		lastOpcode = 0x13;
-        		lastOpcodeArgs = null;
-        		lastOpcodeLen = 1;
-        		lastAssembler = "SRW";
-
-        		IC += 1;
+        		updateCPU("SRW", 0x13, 1, new byte[0]); 
         		
         		break;
         		
@@ -304,12 +247,7 @@ public class CPU {
         	case 0x14:
         		R0 = retro24.readMemory(AR);
         		
-        		lastOpcode = 0x14;
-        		lastOpcodeArgs = null;
-        		lastOpcodeLen = 1;
-        		lastAssembler = "LR0";
-
-        		IC += 1;
+        		updateCPU("LR0", 0x14, 1, new byte[0]); 
         		
         		break;
         		
@@ -319,25 +257,16 @@ public class CPU {
         		R1 = retro24.readMemory(AR);
         		R2 = retro24.readMemory((short) (AR+1));
         		
-        		lastOpcode = 0x15;
-        		lastOpcodeArgs = null;
-        		lastOpcodeLen = 1;
-        		lastAssembler = "LRW";
-
-        		IC += 1;
+        		updateCPU("LRW", 0x15, 1, new byte[0]); 
         		
         		break;
         		
         	// TAW ($16, 1-Byte-OP): AR wird nach R1/R2 kopiert.
         	case 0x16:
-        		R1 = (byte)((AR >> 8) & 0xFF);
+        		R1 = (byte)((AR >>> 8) & 0xFF);
         		R2 = (byte) (AR & 0xFF);
-        		lastOpcode = 0x16;
-        		lastOpcodeArgs = null;
-        		lastOpcodeLen = 1;
-        		lastAssembler = "TAW";
-
-        		IC += 1;
+        		
+        		updateCPU("TAW", 0x16, 1, new byte[0]);  
         		
         		break;
         	
@@ -345,13 +274,7 @@ public class CPU {
             case 0x17:
             	R0 = retro24.readMemory((short) (IC + 1));
             	
-            	lastOpcode = 0x17;
-            	lastOpcodeLen = 2;
-            	lastOpcodeArgs = new byte[] {retro24.readMemory((short) (IC + 1))};
-        		lastAssembler = "MR0";
-
-            	
-            	IC += 2;            	
+            	updateCPU("MR0", 0x17, 2, new byte[] {R0});        	
             	break;
             
             	
@@ -362,32 +285,21 @@ public class CPU {
 
                 // R2 erhält das zweite nachfolgende Byte
                 R2 = retro24.readMemory((short) (IC+2));
-
-                // Opcode-Metadaten aktualisieren
-                lastOpcode = 0x18;          // Letzter ausgeführter Opcode
-                lastOpcodeArgs = new byte[]{retro24.readMemory((short) (IC + 1)), retro24.readMemory((short) (IC + 2))}; // Argumente speichern
-                lastOpcodeLen = 3;          // Befehlslänge: 3 Bytes
-                lastAssembler = "MRW";      // Assembler-Mnemonik
-
-                // Befehlzähler erhöhen (um 3, da 3 Bytes verarbeitet wurden)
-                IC += 3; // Program Counter um 3 erhöhen
-                break;
                 
+                
+                updateCPU("MRW", 0x18, 3, new byte[]{R1, R2});
+                
+                break;
             
             // JZ0 ($19, 1-Byte-OP): Springt zu der in AR angegebenen Adresse, falls R0=$00 ist.
             case 0x19:
+            	
+            	updateCPU("JZ0", 0x19, 1, new byte[0]);
+            	
             	if (R0 == 0x00) {
             		IC = AR;
             	}
-            	else {
-            		IC += 1;
-            	}
             	
-            	lastOpcode = 0x19;
-            	lastOpcodeLen = 1;
-            	lastOpcodeArgs = null;
-        		lastAssembler = "JZ0";
-
             	break;
             
             	
@@ -396,15 +308,13 @@ public class CPU {
             case 0x20:
             	uR1 = R1 & 0xFF;
             	uR2 = R2 & 0xFF;
+            	
+            	updateCPU("JGW", 0x20, 1, new byte[0]);
+            	
             	if (uR1 > uR2) {
             		IC = AR;
             	}
-            	
-            	lastOpcode = 0x20;
-            	lastOpcodeLen = 1;
-            	lastOpcodeArgs = null;
-        		lastAssembler = "JGW";
-
+         
             	break;
             	
         	// JEW ($21, 1-Byte-OP): Springt zu der in AR angegebenen Adresse, falls
@@ -412,15 +322,13 @@ public class CPU {
             case 0x21:
             	uR1 = R1 & 0xFF;
             	uR2 = R2 & 0xFF;
+            	
+            	updateCPU("JEW", 0x21, 1, new byte[0]);
+            	
             	if (uR1 == uR2) {
             		IC = AR;
             	}
             	
-            	lastOpcode = 0x21;
-            	lastOpcodeLen = 1;
-            	lastOpcodeArgs = null;
-        		lastAssembler = "JEW";
-
             	break;
         
         	// OR0 ($22, 2-Byte-OP): Speichert in R0 das logische ODER aus dem
@@ -430,12 +338,7 @@ public class CPU {
             	
             	R0 = (byte) (R0 | argument);
         		
-        		lastOpcode = 0x22;
-        		lastOpcodeArgs = new byte[] {argument};
-        		lastOpcodeLen = 2;
-        		lastAssembler = "OR0";
-        		
-        		IC += 2;
+            	updateCPU("OR0", 0x22, 2, new byte[] {argument});
         		break;
         		
         	// AN0 ($23, 2-Byte-OP): Speichert in R0 das logische UND aus dem
@@ -445,31 +348,21 @@ public class CPU {
             	
             	R0 = (byte) (R0 & argument);
         		
-        		lastOpcode = 0x23;
-        		lastOpcodeArgs = new byte[] {argument};
-        		lastOpcodeLen = 2;
-        		lastAssembler = "AN0";
-        		
-        		IC += 2;
+            	updateCPU("AN0", 0x23, 2, new byte[] {argument});
         		break;
         		
         	// JE0 ($24, 2-Byte-OP): Springt zu der in AR angegebenen Adresse, falls R0
         	//	gleich dem nachfolgenden Byte ist
             case 0x24:
             	argument = retro24.readMemory((short) (IC + 1));
+		
+            	// Zunächst updaten da hier IC erhöht wird
+            	updateCPU("C02", 0x26, 2, new byte[] {argument});
             	
+            	// Wenn R0 == argument setze IC auf AR Adresse (updateCPU Erhöhung des IC wird annuliert)
             	if (R0 == argument) {
             		IC = AR;
             	}
-            	else {
-            		IC += 2;
-            	}
-        		
-        		lastOpcode = 0x24;
-        		lastOpcodeArgs = new byte[] {argument};
-        		lastOpcodeLen = 2;
-        		lastAssembler = "JE0";
-        		
         		
         		break;
             
@@ -477,24 +370,15 @@ public class CPU {
         	case 0x25:
         		R1 = R0;
         		
-        		lastOpcode = 0x25;
-        		lastOpcodeArgs = null;
-        		lastOpcodeLen = 1;
-        		lastAssembler = "C01";
-        		
-        		IC += 1;
+        		updateCPU("C01", 0x25, 1, new byte[0]);
         		break;
         		
         	// C02 ($26, 1-Byte-OP): Kopiert R0 nach R2.
         	case 0x26:
         		R2 = R0;
         		
-        		lastOpcode = 0x26;
-        		lastOpcodeArgs = null;
-        		lastOpcodeLen = 1;
-        		lastAssembler = "C02";
+        		updateCPU("C02", 0x26, 1, new byte[0]);
         		
-        		IC += 1;
         		break;
         		
     		// IRW ($27, 1-Byte-OP): Erhöht den Wert von R1 um 1. Bei Überlauf wird R2
@@ -520,13 +404,9 @@ public class CPU {
 			        // Kein Überlauf bei R1: Nur R1 erhöhen
 			        R1 = (byte) ((uR1 + 1) & 0xFF);
 			    }
-	
-			    lastOpcode = 0x27;
-			    lastOpcodeArgs = null;
-			    lastOpcodeLen = 1;
-			    lastAssembler = "IRW";
-	
-			    IC += 1;
+
+			    updateCPU("IRW", 0x27, 1, new byte[0]);
+			    
 			    break;
 			    
 			// DRW ($28, 1-Byte-OP): Erniedrigt den Wert von R1 um 1. Falls eine
@@ -552,12 +432,8 @@ public class CPU {
         			}
         		}
         		
-        		lastOpcode = 0x28;
-        		lastOpcodeArgs = null;
-        		lastOpcodeLen = 1;
-        		lastAssembler = "DRW";
-        		
-        		IC += 1;
+        		updateCPU("DRW", 0x28, 1, new byte[0]);
+
         		break;
         		
         	// X03 ($29, 1-Byte-OP): Vertauscht die Inhalte von R0 und R3.
@@ -568,34 +444,24 @@ public class CPU {
         		R0 = oldR3;
         		R3 = oldR0;
         		
-        		lastOpcode = 0x29;
-        		lastOpcodeArgs = null;
-        		lastOpcodeLen = 1;
-        		lastAssembler = "X03";
+        		updateCPU("X03", 0x29, 1, new byte[0]);
         		
-        		IC += 1;
         		break;
         	
         	// C03 ($2A, 1-Byte-OP): Kopiert R0 nach R3.
         	case 0x2A:
         		R3 = R0;
-        		lastOpcode = 0x2A;
-        		lastOpcodeArgs = null;
-        		lastOpcodeLen = 1;
-        		lastAssembler = "C03";
+       
+        		updateCPU("C03", 0x2A, 1, new byte[0]);
         		
-        		IC += 1;
         		break;
         		
         	// C30 ($2B, 1-Byte-OP): Kopiert R3 nach R0.
         	case 0x2B:
         		R0 = R3;
-        		lastOpcode = 0x2B;
-        		lastOpcodeArgs = null;
-        		lastOpcodeLen = 1;
-        		lastAssembler = "C30";
-        		
-        		IC += 1;
+
+        		updateCPU("C30", 0x2B, 1, new byte[0]);
+
         		break;
         		
         	// PL0 ($2C, 1-Byte-OP): Schiebt die Bits in R0 um ein Bit nach
@@ -603,35 +469,24 @@ public class CPU {
         	case 0x2C:
         		R0 = (byte) (R0 << 1);
         		
-        		lastOpcode = 0x2C;
-        		lastOpcodeArgs = null;
-        		lastOpcodeLen = 1;
-        		lastAssembler = "PL0";
-        		
-        		IC += 1;
+        		updateCPU("PL0", 0x2C, 1, new byte[0]);
+
         		break;
         		
         	// PR0 ($2D, 1-Byte-OP): Schiebt die Bits in R0 um ein Bit nach
         	//	„rechts“ (entspricht Multiplikation ?DIVISION? mit 2 ohne Übertrag).
         	case 0x2D:
-        		R0 = (byte) (R0 >> 1);
+        		R0 = (byte) (R0 >>> 1);
         		
-        		lastOpcode = 0x2D;
-        		lastOpcodeArgs = null;
-        		lastOpcodeLen = 1;
-        		lastAssembler = "PR0";
+        		updateCPU("PR0", 0x2D, 1, new byte[0]);
         		
-        		IC += 1;
         		break;
         		
         	// HLT ($FF, 1-Byte-OP): Prozessor hält an.
         	case (byte) 0xFF:
         		
-        		lastOpcode = (byte) 0xFF;
-        		lastOpcodeArgs = null;
-        		lastOpcodeLen = 1;
-        		lastAssembler = "HLT";
-        		
+        		updateCPU("HLT", 0xFF, 1, new byte[0]);
+        		IC -= 1; // IC Zurücksetzen da nach HLT nichts folgt.
         		halt = true;
         		
         		break;
@@ -640,8 +495,22 @@ public class CPU {
                 throw new IllegalArgumentException("Unbekannter Opcode: " + Integer.toHexString(opcode));
         }
     }
+    
+    
+    /**
+     * Hilfsmethode zum Updaten der Hilfsvariablen und des IC
+     * @param lastAssembler
+     * @param lastOpcode
+     * @param lastOpcodeLen
+     * @param lastOpcodeArgs
+     */
+    private void updateCPU(String lastAssembler, int lastOpcode, int lastOpcodeLen, byte[] lastOpcodeArgs) {
+    	this.lastOpcode = (byte) lastOpcode;
+    	this.lastOpcodeArgs = lastOpcodeArgs;
+    	this.lastAssembler = lastAssembler;
+    	IC += lastOpcodeLen;
+    }
 
-    // Hilfsmethoden zum Zugriff auf den Retro24-Speicher
     public void setIC(short value) {
         IC = value;
     }
