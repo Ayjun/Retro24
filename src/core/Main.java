@@ -16,7 +16,7 @@ public class Main {
         retro24.initialize();
 
         // Programm laden:
-        retro24.loadProgramm("./Programme/addiereZahlen7bis77.bin");
+        retro24.loadProgramm("./Programme/UNGRADE_Zahlen_7-77.bin");
 
         // Erstelle eine Instanz der CPU
         CPU cpu = retro24.getCPU();

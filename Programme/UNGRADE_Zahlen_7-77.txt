@@ -1,0 +1,68 @@
+;Option „leicht“: ...die Summe der ungeraden Zahlen von 7 bis 77 errechnen und an einer
+;festgelegten Adresse im Speicher ablegen.
+
+;Kurz mit python checken was rauskommen muss:
+;>>> erg = 0
+;>>> for i in range (7,78):
+;...     if i%2 != 0:
+;...             erg+=i
+;... 
+;>>> print(erg)
+;1512
+
+
+
+;Endergebnis muss 1435, bzw. 0x059B sein.
+
+
+        .base $0100 ; Fester Programmstart nach Reset
+
+        MR0, $4D    ; R0 auf 77 setzen
+        
+        
+
+        ; Hier prüfen ob R0 7 ist, dazu R0 - 7 rechnen und danach wieder + 7
+loop:   A01         ; R0 auf R1 addieren
+		DR0         ; R0 - 7
+        DR0
+        DR0
+        DR0
+        DR0
+        DR0
+        DR0
+        MAR, end   ; Endadresse setzen
+        JZ0         ; Falls R0 = 7 war springe zum ende
+        IR0
+        IR0
+        IR0
+        IR0
+        IR0
+        IR0
+        IR0
+        ; Hier ist falls R0 nicht > 7 war R0 wieder im "Normalzustand"
+        DR0         ; R0 dekrementieren, sodass es grade ist
+        DR0         ; R0 dekrementieren, sodass es ungrade ist
+        MAR, loop   ; loop Addresse laden
+        JMP         ; loop wiederholen
+
+
+
+; R1 enthält nun das LSB des Ergebnis
+; R2 enthält nun das MSB des Ergebnis
+
+end:    MAR, safe   ;Addressregister auf Adresse zum speichern setzen. (Addresse nach dem Programm)
+        SRW         ;speichere LSB (R1) an Adresse safe und MSB (R2) an safe+1
+        HLT
+
+safe:
+
+;Erfolg!
+;########################
+;Elapsed Time: 7654 ms
+;Instruction counter: 749
+:Speicherauszug von 0x0100 bis 0x01FF:
+;0x0100: 17 4D 06 07 07 07 07 07 07 07 01 1B 01 19 05 05 
+;0x0110: 05 05 05 05 05 07 07 01 02 01 11 01 20 01 13 FF 
+;0x0120: E8 05 FF FF FF FF FF FF FF FF FF FF FF FF FF FF 
+;
+;0xE8 0x05 an Addr. 0x0120 & 0x0121 sind das korrekte Ergebnis in LSB
