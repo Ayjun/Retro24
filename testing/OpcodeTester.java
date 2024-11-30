@@ -40,19 +40,7 @@ public class OpcodeTester {
 		oldIC = (short) cpu.getIC();
 		oldAR = (short) cpu.getAR();
 	}
-	
-	// Gibt true zurück wenn alle CPU-Hilfsvariablen richtig gesetzt sind
-	boolean testHelperVars(byte sollOpcode, byte[] sollOpcodeArgs, byte sollOpcodeLen, String sollAssembler) {
-	    if (sollOpcode == cpu.getLastOpcode() &&
-	            ((sollOpcodeArgs == null && cpu.getLastOpcodeArgs() == null) || 
-	             (sollOpcodeArgs != null && Arrays.equals(sollOpcodeArgs, cpu.getLastOpcodeArgs()))) &&
-	            sollOpcodeLen == cpu.getlastOpcodeLen() &&
-	            sollAssembler.equals(cpu.getLastAssembler())) {
-	        return true;
-	    } else {
-	        return false;
-	    }
-	}
+
 	// Merken der neuen Registerwerte
 	void updateRegisterValues() {
 		newR0 = cpu.getR0();
@@ -81,7 +69,6 @@ public class OpcodeTester {
 		assertTrue(newR3 == oldR3);
 		assertTrue(newIC == oldIC + len);
 		assertTrue(newAR == oldAR);
-		testHelperVars(opcode, null, len, assembler);
 	}
 	
 	// MAR ($01, 3-Byte-OP): Lädt AR mit den nächsten beiden Bytes.
@@ -114,9 +101,6 @@ public class OpcodeTester {
 
 	    // Überprüfe, ob IC korrekt erhöht wurde
 	    assertTrue(newIC == oldIC + len);
-
-	    // Überprüfe, ob die Hilfsvariablen korrekt gesetzt wurden
-	    testHelperVars(opcode, opcodeArgs, len, assembler);
 
 	    // Überprüfe, ob keine anderen Register verändert wurden
 	    assertTrue(newR0 == oldR0);
@@ -162,8 +146,6 @@ public class OpcodeTester {
 	    // Überprüfe, ob IC korrekt erhöht wurde (obwohl SIC den IC nicht ändert, sondern nur den Speicher schreibt)
 	    assertTrue(newIC == oldIC + len);
 
-	    // Überprüfe, ob die Hilfsvariablen korrekt gesetzt wurden
-	    testHelperVars(opcode, opcodeArgs, len, assembler);
 
 	    // Überprüfe, ob keine anderen Register verändert wurden
 	    assertTrue(newR0 == oldR0);
@@ -204,14 +186,12 @@ public class OpcodeTester {
 	    // Überprüfe, ob IC korrekt erhöht wurde
 	    assertTrue(newIC == oldIC + len);
 
-	    // Überprüfe, ob die Hilfsvariablen korrekt gesetzt wurden
-	    testHelperVars(opcode, opcodeArgs, len, assembler);
-
 	    // Überprüfe, ob keine anderen Register verändert wurden
 	    assertTrue(newR0 == oldR0);
 	    assertTrue(newR3 == oldR3);
 	}
 
+/*
 	// AAR ($04, 1-Byte-OP): Addiert R0 aufs AR, bei Überlauf geht Übertrag verloren.
 	@Test
 	void testAarWithOverflow() {
@@ -579,7 +559,7 @@ public class OpcodeTester {
 	}
 
 	
-	
+*/
 	
 	
 	

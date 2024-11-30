@@ -37,6 +37,7 @@ public class Retro24 {
 
     /**
      * Liest ein Byte aus dem Speicher an der gegebenen Adresse.
+     * @overload Fuer addressen in short Form
      * @param address Die Adresse, von der gelesen werden soll.
      * @return Das Byte an der angegebenen Speicheradresse.
      * @throws IllegalArgumentException Wenn die Adresse außerhalb des Speicherbereichs liegt.
@@ -48,6 +49,22 @@ public class Retro24 {
         }
         return memory[uAddress];
     }
+    
+    /**
+     * Liest ein Byte aus dem Speicher an der gegebenen Adresse.
+     * @overload Fuer addressen in int Form
+     * @param address Die Adresse, von der gelesen werden soll.
+     * @return Das Byte an der angegebenen Speicheradresse.
+     * @throws IllegalArgumentException Wenn die Adresse außerhalb des Speicherbereichs liegt.
+     */
+    public byte readMemory(int address) {
+    	int uAddress = address & 0xFFFF;
+        if (uAddress < 0 || uAddress >= memory.length) {
+            throw new IllegalArgumentException("Adresse außerhalb des Speicherbereichs: " + uAddress);
+        }
+        return memory[uAddress];
+    }
+
 
     /**
      * Schreibt ein Byte in den Speicher an die gegebene Adresse.

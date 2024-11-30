@@ -1,6 +1,11 @@
 package core.CPU;
 
+import java.util.HashMap;
+
 import core.Retro24;
+
+import static core.CPU.Instruction.*;
+import static util.NumberUtil.*;
 
 /**
  * Repräsentation einer fiktiven Retro24 CPU
@@ -17,10 +22,14 @@ public class CPU {
 	private short AR;
 
 	// Hilfsvariablen
+	/*
 	private byte lastOpcode = (byte) 0xFF; // Letzter Opcode ist beim Start FF, da CPU still stand :)
 	private byte[] lastOpcodeArgs = null;
 	private byte lastOpcodeLen = 0;
 	private String lastAssembler = "";
+	*/
+	
+	private Instruction lastInstruction = NUL; /**@Todo Change to HLT */
 
 	private boolean halt = false;
 
@@ -50,12 +59,21 @@ public class CPU {
     	byte opcode = retro24.readMemory(IC);  // Lese das Byte an der Adresse IC
     	executeOpcode(opcode);
     }
+    
+    public void executeOpcode(byte opcode) {
+    	Instruction newInstruction = getInstruction(opcode);
+    	newInstruction.execute(this);
+    	moveIC(newInstruction.getLength());
+    	setLastInstruction(newInstruction);
+    }
 
 
-    /**
+    /**@TODO ALTE METHODEN:
+     
      * Führt die zum übergebenen Opcode gehörige Funktion aus
      * @param opcode
      */
+    /*
     public void executeOpcode(byte opcode) {
 
         // Hier wird der Opcode über einen Switch-Case behandelt
@@ -64,7 +82,7 @@ public class CPU {
         	// NUL ($00, 1-Byte-OP): Prozessor tut nichts
         	case 0x00:
 
-        		updateCPU("NUL", 0x01, 1, new byte[0]);
+        		updateLastInstructionInfo("NUL", opcode, new byte[0]);
 
         		break;
 
@@ -76,7 +94,7 @@ public class CPU {
         	    short address = (short) (((highByte & 0xFF) << 8) | (lowByte & 0xFF));
         	    AR = address;
 
-        	    updateCPU("MAR", 0x01, 3, new byte[] {lowByte, highByte});
+        	    updateLastInstructionInfo("MAR", opcode, new byte[] {lowByte, highByte});
 
         	    break;
 
@@ -90,7 +108,7 @@ public class CPU {
         		retro24.writeMemory(AR, lowByte);
         		retro24.writeMemory(AR+1, highByte);
 
-        		updateCPU("SIC", 0x02, 1, new byte[0]);
+        		updateLastInstructionInfo("SIC", opcode, new byte[0]);
 
         		break;
 
@@ -105,7 +123,7 @@ public class CPU {
 
         		AR = newAR;
 
-        		updateCPU("RAR", 0x03, 1, new byte[0]);
+        		updateLastInstructionInfo("RAR", opcode, new byte[0]);
 
         		break;
 
@@ -115,7 +133,7 @@ public class CPU {
         		int iAR = AR & 0xFFFF;
         		AR = (short) ((iAR + iR0) & 0xFFFF);
 
-        		updateCPU("AAR", 0x04, 1, new byte[0]);
+        		updateLastInstructionInfo("AAR", opcode, new byte[0]);
 
         		break;
 
@@ -126,7 +144,7 @@ public class CPU {
         			R0 += 1;
         		}
 
-        		updateCPU("IR0", 0x05, 1, new byte[0]);
+        		updateLastInstructionInfo("IR0", opcode, new byte[0]);
 
         		break;
 
@@ -155,7 +173,7 @@ public class CPU {
 			        R1 = (byte) ((uR1 + uR0) & 0xFF);
 			    }
 
-			    updateCPU("A01", 0x06, 1, new byte[0]);
+			    updateLastInstructionInfo("A01", opcode, new byte[0]);
 
 			    break;
 
@@ -165,7 +183,7 @@ public class CPU {
         			R0 -= 1;
         		}
 
-        		updateCPU("DR0", 0x07, 1, new byte[0]);
+        		updateLastInstructionInfo("DR0", opcode, new byte[0]);
 
         		break;
 
@@ -193,7 +211,7 @@ public class CPU {
         			}
         		}
 
-        		updateCPU("S01", 0x08, 1, new byte[0]);
+        		updateLastInstructionInfo("S01", opcode, new byte[0]);
 
         		break;
 
@@ -205,7 +223,7 @@ public class CPU {
         		R1 = R2Old;
         		R2 = R1Old;
 
-        		updateCPU("X12", 0x09, 1, new byte[0]);
+        		updateLastInstructionInfo("X12", opcode, new byte[0]);
 
         		break;
 
@@ -217,14 +235,14 @@ public class CPU {
         		R0 = R1Old;
         		R1 = R0Old;
 
-        		updateCPU("X01", 0x10, 1, new byte[0]);
+        		updateLastInstructionInfo("X01", opcode, new byte[0]);
 
         		break;
 
         	// JMP ($11, 1-Byte-OP): Springt zu der in AR angegebenen Adresse.
         	case 0x11:
 
-        		updateCPU("JMP", 0x11, 1, new byte[0]);
+        		updateLastInstructionInfo("JMP", opcode, new byte[0]);
 
         		IC = AR;
 
@@ -234,7 +252,7 @@ public class CPU {
         	case 0x12:
         		retro24.writeMemory(AR, R0);
 
-        		updateCPU("SR0", 0x12, 1, new byte[0]);
+        		updateLastInstructionInfo("SR0", opcode, new byte[0]);
 
         		break;
 
@@ -243,7 +261,7 @@ public class CPU {
         		retro24.writeMemory(AR, R1);
         		retro24.writeMemory(AR + 1, R2);
 
-        		updateCPU("SRW", 0x13, 1, new byte[0]);
+        		updateLastInstructionInfo("SRW", opcode, new byte[0]);
 
         		break;
 
@@ -251,7 +269,7 @@ public class CPU {
         	case 0x14:
         		R0 = retro24.readMemory(AR);
 
-        		updateCPU("LR0", 0x14, 1, new byte[0]);
+        		updateLastInstructionInfo("LR0", opcode, new byte[0]);
 
         		break;
 
@@ -261,7 +279,7 @@ public class CPU {
         		R1 = retro24.readMemory(AR);
         		R2 = retro24.readMemory((short) (AR+1));
 
-        		updateCPU("LRW", 0x15, 1, new byte[0]);
+        		updateLastInstructionInfo("LRW", opcode, new byte[0]);
 
         		break;
 
@@ -270,7 +288,7 @@ public class CPU {
         		R1 = (byte)((AR >>> 8) & 0xFF);
         		R2 = (byte) (AR & 0xFF);
 
-        		updateCPU("TAW", 0x16, 1, new byte[0]);
+        		updateLastInstructionInfo("TAW", opcode, new byte[0]);
 
         		break;
 
@@ -278,7 +296,7 @@ public class CPU {
             case 0x17:
             	R0 = retro24.readMemory((short) (IC + 1));
 
-            	updateCPU("MR0", 0x17, 2, new byte[] {R0});
+            	updateLastInstructionInfo("MR0", opcode, new byte[] {R0});
             	break;
 
 
@@ -291,14 +309,14 @@ public class CPU {
                 R2 = retro24.readMemory((short) (IC+2));
 
 
-                updateCPU("MRW", 0x18, 3, new byte[]{R1, R2});
+                updateLastInstructionInfo("MRW", opcode, new byte[]{R1, R2});
 
                 break;
 
             // JZ0 ($19, 1-Byte-OP): Springt zu der in AR angegebenen Adresse, falls R0=$00 ist.
             case 0x19:
 
-            	updateCPU("JZ0", 0x19, 1, new byte[0]);
+            	updateLastInstructionInfo("JZ0", opcode, new byte[0]);
 
             	if (R0 == 0x00) {
             		IC = AR;
@@ -313,7 +331,7 @@ public class CPU {
             	uR1 = R1 & 0xFF;
             	uR2 = R2 & 0xFF;
 
-            	updateCPU("JGW", 0x20, 1, new byte[0]);
+            	updateLastInstructionInfo("JGW", opcode, new byte[0]);
 
             	if (uR1 > uR2) {
             		IC = AR;
@@ -327,7 +345,7 @@ public class CPU {
             	uR1 = R1 & 0xFF;
             	uR2 = R2 & 0xFF;
 
-            	updateCPU("JEW", 0x21, 1, new byte[0]);
+            	updateLastInstructionInfo("JEW", opcode, new byte[0]);
 
             	if (uR1 == uR2) {
             		IC = AR;
@@ -342,7 +360,7 @@ public class CPU {
 
             	R0 = (byte) (R0 | argument);
 
-            	updateCPU("OR0", 0x22, 2, new byte[] {argument});
+            	updateLastInstructionInfo("OR0", opcode, new byte[] {argument});
         		break;
 
         	// AN0 ($23, 2-Byte-OP): Speichert in R0 das logische UND aus dem
@@ -352,7 +370,7 @@ public class CPU {
 
             	R0 = (byte) (R0 & argument);
 
-            	updateCPU("AN0", 0x23, 2, new byte[] {argument});
+            	updateLastInstructionInfo("AN0", opcode, new byte[] {argument});
         		break;
 
         	// JE0 ($24, 2-Byte-OP): Springt zu der in AR angegebenen Adresse, falls R0
@@ -361,7 +379,7 @@ public class CPU {
             	argument = retro24.readMemory((short) (IC + 1));
 
             	// Zunächst updaten da hier IC erhöht wird
-            	updateCPU("C02", 0x26, 2, new byte[] {argument});
+            	updateLastInstructionInfo("C02", opcode, new byte[] {argument});
 
             	// Wenn R0 == argument setze IC auf AR Adresse (updateCPU Erhöhung des IC wird annuliert)
             	if (R0 == argument) {
@@ -374,14 +392,14 @@ public class CPU {
         	case 0x25:
         		R1 = R0;
 
-        		updateCPU("C01", 0x25, 1, new byte[0]);
+        		updateLastInstructionInfo("C01", opcode, new byte[0]);
         		break;
 
         	// C02 ($26, 1-Byte-OP): Kopiert R0 nach R2.
         	case 0x26:
         		R2 = R0;
 
-        		updateCPU("C02", 0x26, 1, new byte[0]);
+        		updateLastInstructionInfo("C02", opcode, new byte[0]);
 
         		break;
 
@@ -409,7 +427,7 @@ public class CPU {
 			        R1 = (byte) ((uR1 + 1) & 0xFF);
 			    }
 
-			    updateCPU("IRW", 0x27, 1, new byte[0]);
+			    updateLastInstructionInfo("IRW", opcode, new byte[0]);
 
 			    break;
 
@@ -436,7 +454,7 @@ public class CPU {
         			}
         		}
 
-        		updateCPU("DRW", 0x28, 1, new byte[0]);
+        		updateLastInstructionInfo("DRW", opcode, new byte[0]);
 
         		break;
 
@@ -448,7 +466,7 @@ public class CPU {
         		R0 = oldR3;
         		R3 = oldR0;
 
-        		updateCPU("X03", 0x29, 1, new byte[0]);
+        		updateLastInstructionInfo("X03", opcode, new byte[0]);
 
         		break;
 
@@ -456,7 +474,7 @@ public class CPU {
         	case 0x2A:
         		R3 = R0;
 
-        		updateCPU("C03", 0x2A, 1, new byte[0]);
+        		updateLastInstructionInfo("C03", opcode, new byte[0]);
 
         		break;
 
@@ -464,7 +482,7 @@ public class CPU {
         	case 0x2B:
         		R0 = R3;
 
-        		updateCPU("C30", 0x2B, 1, new byte[0]);
+        		updateLastInstructionInfo("C30", opcode, new byte[0]);
 
         		break;
 
@@ -473,7 +491,7 @@ public class CPU {
         	case 0x2C:
         		R0 = (byte) (R0 << 1);
 
-        		updateCPU("PL0", 0x2C, 1, new byte[0]);
+        		updateLastInstructionInfo("PL0", opcode, new byte[0]);
 
         		break;
 
@@ -482,14 +500,14 @@ public class CPU {
         	case 0x2D:
         		R0 = (byte) (R0 >>> 1);
 
-        		updateCPU("PR0", 0x2D, 1, new byte[0]);
+        		updateLastInstructionInfo("PR0", opcode, new byte[0]);
 
         		break;
 
         	// HLT ($FF, 1-Byte-OP): Prozessor hält an.
         	case (byte) 0xFF:
 
-        		updateCPU("HLT", 0xFF, 1, new byte[0]);
+        		updateLastInstructionInfo("HLT", opcode, new byte[0]);
         		IC -= 1; // IC Zurücksetzen da nach HLT nichts folgt.
         		halt = true;
 
@@ -497,29 +515,83 @@ public class CPU {
 
             default:
                 throw new IllegalArgumentException("Unbekannter Opcode: " + Integer.toHexString(opcode));
+                
+                
+         // @TODO   moveIC();
         }
-    }
+    /*
 
+    /**
+     * Schreibt ein byte array nach Adresse in AR, erstindexiertes Element an erster Adress
+     */
+    
+    /**
+     * Schreibt ein byte array nach Adresse in AR, erstindexiertes Element an erster (kleinerer) Adresse
+     * @param data (das Array)
+     */
+    public void writeToARIncrementing(byte[] data) {
+    	for (int i = 0; i < data.length; i++) {
+    		retro24.writeMemory(AR + i, data[i]);
+    	}
+    }
+    
+    /**
+     * Schreibt ein byte array nach Adresse in AR, letztindexiertes Element an erster (kleinerer) Adresse
+     * @param data (das Array)
+     */
+    public void writeToARDecrementing(byte[] data) {
+    	for (int i = data.length - 1, j = 0; i >= 0; i--, j++) {
+    		retro24.writeMemory(AR+j, data[i]);
+    	}
+    }
+    
+    /**
+     * Liefert das X-te Argmunet des Opcodes (X = number), beginnt bei 0.
+     * @param number
+     * @return
+     */
+    public byte getOpcodeArgument(int number) {
+    	return this.retro24.readMemory(IC + 1 + number);
+    }
+    
 
     /**
      * Hilfsmethode zum Updaten der Hilfsvariablen und des IC
      * @param lastAssembler
      * @param lastOpcode
-     * @param lastOpcodeLen
      * @param lastOpcodeArgs
      */
-    private void updateCPU(String lastAssembler, int lastOpcode, int lastOpcodeLen, byte[] lastOpcodeArgs) {
+    /*
+    private void updateLastInstructionInfo(String lastAssembler, int lastOpcode, byte[] lastOpcodeArgs) {
     	this.lastOpcode = (byte) lastOpcode;
     	this.lastOpcodeArgs = lastOpcodeArgs;
     	this.lastAssembler = lastAssembler;
-    	IC += lastOpcodeLen;
+    }
+    */
+    
+    /**
+     * Verschiebt den InstructionCounter um die OpcodeLength. Führt bei überschreiten von 0xFFFF zu einem wrap around.
+     */
+    private void moveIC(int moveBy) {
+    	if (isHalted()) {
+    		return;
+    	}
+    	
+    	int newIC = unsign(IC) + moveBy;
+    	
+    	// Behalte nur die letzten 16 Bit, dies ermöglicht auch wrap around:
+    	IC = (short) (newIC & 0xFFFF);
+    }
+    
+    public boolean isHalted() {
+    	return halt;
     }
 
-    public void setIC(short value) {
+	public void setIC(short value) {
         IC = value;
     }
 
-    public int getIC() {
+    public short getIC() {
         return IC;
     }
 
@@ -547,6 +619,7 @@ public class CPU {
 		return R3;
 	}
 
+/** @TODO ALTE GETTER:
     public byte getLastOpcode() {
     	return lastOpcode;
     }
@@ -566,4 +639,33 @@ public class CPU {
     public String getLastAssembler() {
     	return lastAssembler;
     }
+*/
+    
+	public void setR0(byte r0) {
+		R0 = r0;
+	}
+
+	public void setR1(byte r1) {
+		R1 = r1;
+	}
+
+	public void setR2(byte r2) {
+		R2 = r2;
+	}
+
+	public void setR3(byte r3) {
+		R3 = r3;
+	}
+	
+	public void setHalt(boolean halt) {
+		this.halt = halt;
+	}
+
+	public Instruction getLastInstruction() {
+		return lastInstruction;
+	}
+
+	public void setLastInstruction(Instruction lastInstruction) {
+		this.lastInstruction = lastInstruction;
+	}
 }

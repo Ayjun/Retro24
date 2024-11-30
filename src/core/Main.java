@@ -3,6 +3,9 @@ package core;
 import java.util.Scanner;
 
 import core.CPU.CPU;
+import core.CPU.Instruction;
+import static util.StringUtil.*;
+
 /**
  * Main Klasse, existiert aktuell hauptsächlich zu Test- und Debugzwecken.
  * @author Eric Schneider
@@ -16,7 +19,7 @@ public class Main {
         retro24.initialize();
 
         // Programm laden:
-        retro24.loadProgramm("./Programme/UNGRADE_Zahlen_7-77.bin");
+        retro24.loadProgramm("./Programme/addiereZahlen7bis77.bin");
 
         // Erstelle eine Instanz der CPU
         CPU cpu = retro24.getCPU();
@@ -38,7 +41,7 @@ public class Main {
     	printRegisterState(cpu);   // Zeige Register nach der Ausführung
     	cpu.executeOpcode(); // Erste Instruktion ausführen
         // Starten
-    	while (!cpu.istGestoppt()){
+    	while (!cpu.isHalted()){
         	printLastOpcode(cpu);		// Zeige zuletzt ausgeführten Opcode
             printRegisterState(cpu);   // Zeige Register nach der Ausführung
         	cpu.executeOpcode();
@@ -74,7 +77,7 @@ public class Main {
     	printRegisterState(cpu);   // Zeige Register nach der Ausführung
     	cpu.executeOpcode(); // Erste Instruktion ausführen
         // Starten
-    	while (!cpu.istGestoppt()){
+    	while (!cpu.isHalted()){
     		scan.nextLine();
         	printLastOpcode(cpu);		// Zeige zuletzt ausgeführten Opcode
             printRegisterState(cpu);   // Zeige Register nach der Ausführung
@@ -106,29 +109,21 @@ public class Main {
      * @param cpu
      */
     private static void printLastOpcode(CPU cpu) {
+    	Instruction lastInstruction = cpu.getLastInstruction();
+    	
     	System.out.println("Letzter Opcode:");
-    	System.out.println("Opcode:	" + String.format("0x%02X", cpu.getLastOpcode()));
+    	System.out.println("Opcode:	" + String.format("0x%02X", cpu.getLastInstruction().getOpcode()));
     	System.out.print  ("Args:	");
 
-    	String args = "";
-
-    	if (cpu.getLastOpcodeArgs().length == 0) {
+    	if (cpu.getLastInstruction().getLength() == 0) {
     		System.out.println("keine");
+    		return;
     	}
-    	else {
-    		for (int i=0; i < cpu.getLastOpcodeArgs().length; i++) {
-        		byte arg = cpu.getLastOpcodeArgs()[i];
-        		System.out.print(String.format("0x%02X", arg));
-        		args += (String.format("0x%02X", arg));
-        		if (i < cpu.getLastOpcodeArgs().length - 1) {
-        			System.out.print(", ");
-        			args += " ";
-        		}
-    		}
-    		System.out.println();
-    	}
-    	System.out.println("Len:	" + cpu.getlastOpcodeLen() + " Byte");
-    	System.out.println(cpu.getLastAssembler() + " " + args);
+    	
+    	System.out.println(byteArrayToString(lastInstruction.getArgs()));
+    	
+    	System.out.println("Len:	" + lastInstruction.getLength() + " Byte");
+    	System.out.println(lastInstruction.getAssemblerCode() + " " + byteArrayToString(lastInstruction.getArgs()));
     	System.out.println("------------------------");
 
     }
