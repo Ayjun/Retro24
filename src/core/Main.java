@@ -19,12 +19,12 @@ public class Main {
         retro24.initialize();
 
         // Programm laden:
-        retro24.loadProgramm("./Programme/addiereZahlen7bis77.bin");
+        retro24.loadProgramm("./Programme/UNGRADE_Zahlen_7-77.bin");
 
         // Erstelle eine Instanz der CPU
         CPU cpu = retro24.getCPU();
         dumpMemory(retro24, (short)0x0100, (short)0x01FF);
-        run(cpu, 100);
+        run(cpu, 50);
         dumpMemory(retro24, (short) 0x0100, (short) 0x01FF);
 
     }
@@ -115,7 +115,7 @@ public class Main {
     	System.out.println("Opcode:	" + String.format("0x%02X", cpu.getLastInstruction().getOpcode()));
     	System.out.print  ("Args:	");
 
-    	if (cpu.getLastInstruction().getLength() == 0) {
+    	if (cpu.getLastInstruction().getLength() == 1) {
     		System.out.println("keine");
     		return;
     	}
