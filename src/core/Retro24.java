@@ -4,8 +4,10 @@ import java.io.BufferedInputStream;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Arrays;
 
 import core.CPU.CPU;
+import core.graphics.GraphicChip;
 
 /**
  * Repräsentation des emulierten Retro24 Systems und seinen Komponenten
@@ -15,6 +17,7 @@ public class Retro24 {
 
 	private byte[] memory;
 	private CPU cpu;
+	private GraphicChip graphicChip;
 
 	/**
 	 * Initialisert das System und alle Komponenten
@@ -33,6 +36,9 @@ public class Retro24 {
 
 		cpu = new CPU(this);
 		cpu.initCPU();
+		
+		graphicChip = new GraphicChip(this, 0xE000, 0xFFFF);
+		graphicChip.init();
 	}
 
     /**
@@ -58,11 +64,66 @@ public class Retro24 {
      * @throws IllegalArgumentException Wenn die Adresse außerhalb des Speicherbereichs liegt.
      */
     public byte readMemory(int address) {
-    	int uAddress = address & 0xFFFF;
-        if (uAddress < 0 || uAddress >= memory.length) {
-            throw new IllegalArgumentException("Adresse außerhalb des Speicherbereichs: " + uAddress);
+        if (address < 0 || address >= memory.length) {
+            throw new IllegalArgumentException("Adresse außerhalb des Speicherbereichs: " + address);
         }
+        int uAddress = address & 0xFFFF; // Bitmaskierung für Konsistenz
         return memory[uAddress];
+    }
+    
+    /**
+     * Liest Daten aus dem Speicher von Startaddresse bis Endaddresse und gibt sie als byte Array zurück.
+     * @overload Für Mehrzahl an byte Arrays in range
+     * @param from Die Adresse, von der an gelesen werden soll.
+     * @param to Die Adresse bis zu der gelesen werden soll (inklusive).
+     * @return Das Byte an der angegebenen Speicheradresse.
+     * @throws IllegalArgumentException Wenn die Adresse außerhalb des Speicherbereichs liegt.
+     */
+    public byte[] readMemory(int from, int to) {
+        // Prüfen, ob die Adressen im gültigen Bereich liegen
+        if (from < 0 || from >= memory.length) {
+            throw new IllegalArgumentException("Startadresse außerhalb des Speicherbereichs: " + from);
+        }
+        if (to < 0 || to >= memory.length) {
+            throw new IllegalArgumentException("Endadresse außerhalb des Speicherbereichs: " + to);
+        }
+        if (from > to) {
+            throw new IllegalArgumentException("Startadresse darf nicht größer als Endadresse sein: from=" + from + ", to=" + to);
+        }
+
+        // Arrays.copyOfRange erfordert eine exklusive Obergrenze
+        return Arrays.copyOfRange(memory, from, to + 1);
+    }
+
+    
+    /**
+     * Schreibt übergebene Daten in den Speicher von Startadresse bis Endadresse.
+     * @overload Für Mehrzahl an Bytes (byte Array)
+     * @param from Die Adresse, von der an geschrieben werden soll.
+     * @param to Die Adresse bis zu der geschrieben werden soll (inklusive).
+     * @param data Das Array mit den Bytes, die in den Speicher geschrieben werden sollen.
+     * @throws IllegalArgumentException Wenn die Adresse außerhalb des Speicherbereichs liegt oder die Daten nicht passen.
+     */
+    public void writeMemory(int from, int to, byte[] data) {
+        // Prüfen, ob die Adressen im gültigen Bereich liegen
+        if (from < 0 || from >= memory.length) {
+            throw new IllegalArgumentException("Startadresse außerhalb des Speicherbereichs: " + from);
+        }
+        if (to < 0 || to >= memory.length) {
+            throw new IllegalArgumentException("Endadresse außerhalb des Speicherbereichs: " + to);
+        }
+        if (from > to) {
+            throw new IllegalArgumentException("Startadresse darf nicht größer als Endadresse sein: from=" + from + ", to=" + to);
+        }
+        
+        // Prüfen, ob die Daten ins angegebene Speicherintervall passen
+        int length = to - from + 1;
+        if (data.length != length) {
+            throw new IllegalArgumentException("Datenlänge stimmt nicht mit Adressbereich überein: erwartet " + length + ", erhalten " + data.length);
+        }
+
+        // Daten in den Speicher schreiben
+        System.arraycopy(data, 0, memory, from, length);
     }
 
 
@@ -140,6 +201,11 @@ public class Retro24 {
     public CPU getCPU() {
     	return cpu;
     }
-
-
+    
+    /**
+     * @return Grafikchip der Retro24 Instanz
+     */
+    public GraphicChip getGraphicChip() {
+    	return graphicChip;
+    }
 }
