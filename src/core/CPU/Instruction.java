@@ -44,7 +44,7 @@ public enum Instruction {
 		byte[] bytes = shortToByteArray(cpu.getIC());
 
 		// highbyte ist an bytes[0] lowbyte an bytes[1]
-		// nutze daher decrementing um das lowbyte zuerst zu schreiben
+		// nutze daher Decrementing um das lowByte zuerst zu schreiben
 		cpu.writeToARDecrementing(bytes);
 
 		return new byte[0];
@@ -55,7 +55,7 @@ public enum Instruction {
 	// RAR ($03, 1-Byte-OP): R1/R2 werden ins AR kopiert.
 	RAR("RAR", 0x03, (cpu) -> {
 
-		short newAR = twoByteToShort(cpu.getR1(), cpu.getR2());
+		short newAR = twoByteToShort(cpu.getR2(), cpu.getR1());
 
 		cpu.setAR(newAR);
 
@@ -225,8 +225,8 @@ public enum Instruction {
 		byte highByte = ARbytes[0];
 		byte lowByte = ARbytes[1];
 		
-		cpu.setR1(highByte);
-		cpu.setR2(lowByte);
+		cpu.setR1(lowByte);
+		cpu.setR2(highByte);
 		
 		return new byte[0];
 	}),

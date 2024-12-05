@@ -19,7 +19,7 @@ public class Main {
         retro24.initialize();
 
         // Programm laden:
-        retro24.loadProgramm("./Programme/UNGRADE_Zahlen_7-77.bin");
+        retro24.loadProgramm("/home/eric/pCloudDrive/Studium/Retrocomputing/RETRO24/Programme/Mattis/MS2a.bin");
 
         // Erstelle eine Instanz der CPU
         CPU cpu = retro24.getCPU();
@@ -93,7 +93,8 @@ public class Main {
      * Gibt die Registerinhalte der cpu auf der Konsole aus
      * @param cpu
      */
-    private static void printRegisterState(CPU cpu) {
+    private static int i=1;
+    public static void printRegisterState(CPU cpu) {
         System.out.println("Registerinhalt:");
         System.out.println("R0: " + String.format("0x%02X", cpu.getR0()));
         System.out.println("R1: " + String.format("0x%02X", cpu.getR1()));
@@ -101,43 +102,42 @@ public class Main {
         System.out.println("R3: " + String.format("0x%02X", cpu.getR3()));
         System.out.println("IC: " + String.format("0x%04X", cpu.getIC()));
         System.out.println("AR: " + String.format("0x%04X", cpu.getAR()));
-        System.out.println("########################");
+        System.out.println("########################"+i);
     }
 
     /**
      * Gibt die Details des zuletzt ausgeführten Opcodes der cpu auf der Konsole aus
      * @param cpu
      */
-    private static void printLastOpcode(CPU cpu) {
+    public static void printLastOpcode(CPU cpu) {
     	Instruction lastInstruction = cpu.getLastInstruction();
-    	
     	System.out.println("Letzter Opcode:");
     	System.out.println("Opcode:	" + String.format("0x%02X", cpu.getLastInstruction().getOpcode()));
     	System.out.print  ("Args:	");
 
     	if (cpu.getLastInstruction().getLength() == 1) {
     		System.out.println("keine");
-    		return;
     	}
-    	
-    	System.out.println(byteArrayToString(lastInstruction.getArgs()));
-    	
+    	else {
+    		System.out.println(byteArrayToString(lastInstruction.getArgs()));
+    	}
+
     	System.out.println("Len:	" + lastInstruction.getLength() + " Byte");
     	System.out.println(lastInstruction.getAssemblerCode() + " " + byteArrayToString(lastInstruction.getArgs()));
     	System.out.println("------------------------");
-
+    	i+=1;
     }
 
     /**
      *  Methode, um einen bestimmten Bereich des Speichers auszugeben
      * @param retro24
-     * @param from Startspeicheradresse
-     * @param to Endpeicheradresse
+     * @param vidmemstart Startspeicheradresse
+     * @param vidmemend Endpeicheradresse
      */
-    private static void dumpMemory(Retro24 retro24, short from, short to) {
+    public static void dumpMemory(Retro24 retro24, int vidmemstart, int vidmemend) {
         // Umwandlung von short zu unsigned int durch Bitmaskierung
-        int uFrom = from & 0xFFFF; // Maske für die unteren 16 Bits (von 0 bis 65535)
-        int uTo = to & 0xFFFF;
+        int uFrom = vidmemstart & 0xFFFF; // Maske für die unteren 16 Bits (von 0 bis 65535)
+        int uTo = vidmemend & 0xFFFF;
 
         // Überprüfen, ob die Bereichsgrenzen sinnvoll sind
         if (uFrom > uTo || uFrom < 0x0000 || uTo > 0xFFFF) {
@@ -145,7 +145,7 @@ public class Main {
             return;
         }
 
-        System.out.println("Speicherauszug von " + String.format("0x%04X", from) + " bis " + String.format("0x%04X", to) + ":");
+        System.out.println("Speicherauszug von " + String.format("0x%04X", vidmemstart) + " bis " + String.format("0x%04X", vidmemend) + ":");
 
         // Formatierte Ausgabe des Speicherinhalts in 16er-Blöcken
         for (int address = uFrom; address <= uTo; address += 16) {

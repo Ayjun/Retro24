@@ -37,7 +37,7 @@ public class Retro24 {
 		cpu = new CPU(this);
 		cpu.initCPU();
 		
-		graphicChip = new GraphicChip(this, 0xE000, 0xFFFF);
+		graphicChip = new GraphicChip(this);
 		graphicChip.init();
 	}
 
@@ -193,7 +193,10 @@ public class Retro24 {
         	writeMemory(i, programm[j]);
         }
     }
-
+    
+    public void runNextInstruction() {
+    	cpu.executeOpcode();
+    }
 
     /**
      * @return die CPU der Retro24 Instanz

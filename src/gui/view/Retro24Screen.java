@@ -1,10 +1,12 @@
 package gui.view;
 
 import gui.controller.Retro24Controller;
+import javafx.animation.PauseTransition;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 
 public class Retro24Screen extends Application {
 
@@ -26,6 +28,11 @@ public class Retro24Screen extends Application {
         primaryStage.setScene(scene);
         primaryStage.show();
         
+        // Pause für 3 Sekunden, bevor das System gestartet wird
+        // um den Willkommensbildschirm zu zeigen
+        PauseTransition pause = new PauseTransition(Duration.seconds(3));
+        pause.setOnFinished(event -> sc.runSystem());
+        pause.play();
         
     }
 

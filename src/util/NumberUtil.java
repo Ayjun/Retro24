@@ -196,4 +196,90 @@ public class NumberUtil {
     public static int uAnd(byte a, byte b) {
     	return unsign(a) & unsign(b);
     }
+    
+    /**
+     * Methode ermittelt die Position einer zweidimensionalen Koordinate 
+     * in einem eindimensionalen Raum.
+     * @param x die horizontale Koordinate der zu ermitteltenden Position
+     * @param y die vertikale Koordinate der zu ermitteltenden Position
+     * @param xSize die Breite des zweidimensionalen Raumes
+     * @param ySize die Höhe des zweidimensionalen Raumes
+     * @param startAdress die Startaddresse (offset) für die Position im eindimensionalen Raum
+     * @return die Position im eindimensionalen Raum
+     */
+    public static int calculate1DAddress(int x, int y, int xSize, int ySize, int startAdress) {
+        // Überprüfen, ob die Koordinaten innerhalb der 1-basierten Grenzen liegen
+        if (x < 1 || x > xSize || y < 1 || y > ySize) {
+            throw new IllegalArgumentException("Koordinaten sind außerhalb des gültigen Bereichs.");
+        }
+        // Anpassen der 1-basierten Koordinaten auf 0-basierten Index
+        int adjustedX = x - 1;
+        int adjustedY = y - 1;
+        
+        // Berechnung der eindimensionalen Position
+        return startAdress + adjustedY * xSize + adjustedX;
+    }
+    
+    /**
+     * Konvertiert ein boolean zu eine Byte bei dem das letzte Bit entsprechend des booleans gesetzt ist.
+     * (false = 0x00, true = 0x01)
+     * @param bool der boolean
+     * @return das byte
+     */
+    public static byte booleanToByte(boolean bool) {
+    	return (byte) (bool ? 1 : 0);
+    }
+    
+    public static int[][] calcHorizontalLine(int xFrom, int xTo, int y) {
+        // Berechnen der Anzahl der Punkte in der Linie
+        int length = Math.abs(xTo - xFrom) + 1;
+        
+        // 2D-Array initialisieren
+        int[][] line = new int[length][2];
+        
+        // Punkte zur Linie hinzufügen
+        int index = 0;
+        if (xFrom <= xTo) {
+            for (int x = xFrom; x <= xTo; x++) {
+                line[index][0] = x; // x variiert
+                line[index][1] = y; // y bleibt konstant
+                index++;
+            }
+        } else {
+            for (int x = xFrom; x >= xTo; x--) {
+                line[index][0] = x; // x variiert abwärts
+                line[index][1] = y; // y bleibt konstant
+                index++;
+            }
+        }
+        
+        return line;
+    }
+    
+    public static int[][] calcVerticalLine(int yFrom, int yTo, int x) {
+        // Berechnen der Anzahl der Punkte in der Linie
+        int length = Math.abs(yTo - yFrom) + 1;
+        
+        // 2D-Array initialisieren
+        int[][] line = new int[length][2];
+        
+        // Punkte zur Linie hinzufügen
+        int index = 0;
+        if (yFrom <= yTo) {
+            for (int y = yFrom; y <= yTo; y++) {
+                line[index][0] = x; // x bleibt konstant
+                line[index][1] = y; // y variiert
+                index++;
+            }
+        } else {
+            for (int y = yFrom; y >= yTo; y--) {
+                line[index][0] = x; // x bleibt konstant
+                line[index][1] = y; // y variiert abwärts
+                index++;
+            }
+        }
+        
+        return line;
+    }
+
 }
