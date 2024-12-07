@@ -8,17 +8,26 @@ import core.CPU.CPU;
 import core.graphics.GraphicChip;
 import gui.view.ScreenView;
 import javafx.animation.KeyFrame;
+import javafx.animation.PauseTransition;
 import javafx.animation.Timeline;
+import javafx.scene.Scene;
+import javafx.scene.layout.BorderPane;
+import javafx.stage.Stage;
 import javafx.util.Duration;
 
-public class Retro24Controller {
+/**
+ * Schnittstelle zwischen Retro24 System und der View, steuert das Model und die View.
+ * @author Eric Schneider
+ */
+public class ScreenViewController {
 	private final Retro24 retro24;
 	private final GraphicChip graphicChip;
 	private final CPU cpu;
 	public ScreenView screenView;
+	public String programPath;
 	
-	public Retro24Controller() {
-		this.screenView = new ScreenView(64, 64, 0x0000, 0x1000);
+	public ScreenViewController() {
+		this.screenView = new ScreenView(GraphicChip.PIXELWIDTH, GraphicChip.PIXELHEIGHT, 0x0000, 0x1000);
 		this.retro24 = new Retro24();
 		retro24.initialize();
 		this.cpu = retro24.getCPU();
@@ -26,6 +35,7 @@ public class Retro24Controller {
 		updateView();
 	}
 	
+    
 	public void updateView() {
 		// Videoupdate Flag prüfen
 		if (graphicChip.getUpdateFlag()) {
@@ -57,11 +67,16 @@ public class Retro24Controller {
 
 	
 	public void runSystem() {
-		//TESTPROGRAMM:
-		retro24.loadProgramm("/home/eric/Downloads/output (36).bin");
+		// Wenn die Stage (retro24 screen) geschlossen wird, beende auch die CPU.
+		screenView.getStage().setOnCloseRequest((close) -> {stopSystem();});
+		
+		
+		
+		//Programm laden:
+		retro24.loadProgramm(programPath);
 		
 		// DEBUGGING!
-		Scanner scan = new Scanner(System.in);
+		// Scanner scan = new Scanner(System.in);
 		// ENDDEBUGGING
 		
 		Thread systemThread = new Thread(() -> {
@@ -73,20 +88,30 @@ public class Retro24Controller {
 				retro24.runNextInstruction();
 				updateView();
 				try {
-					Thread.sleep(50);
+					Thread.sleep(10);
 				} catch (InterruptedException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
+				Main.dumpMemory(retro24, 0x0110, 0x011F);
 				Main.printLastOpcode(cpu);
 				Main.printRegisterState(cpu);
 				
+				// DEBUGGIN!
 				//scan.nextLine();
+				// ENDDEUBUGGING!
 			}
 			Main.dumpMemory(retro24, 0x0100, 0x01FF);
 		});
 		
 		systemThread.start();
-		
+	}
+	
+	public void stopSystem() {
+		this.retro24.getCPU().setHalt(true);
+	}
+	
+	public void setProgramPath(String path) {
+		this.programPath = path;
 	}
 }

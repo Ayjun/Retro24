@@ -1,8 +1,14 @@
 package gui.view;
 
+import gui.controller.ScreenViewController;
+import javafx.animation.PauseTransition;
+import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.paint.Color;
+import javafx.stage.Stage;
+import javafx.util.Duration;
 
 public class ScreenView {
 
@@ -11,6 +17,7 @@ public class ScreenView {
     private final int height;
     private final int darkLightStartAddress;
     private final int colorStartAddress;
+    private Stage retro24Stage;
 
     public ScreenView(int width, int height, int darkLightStartAddress, int colorStartAddress) {
         this.width = width;
@@ -20,6 +27,35 @@ public class ScreenView {
 
         // Canvas erstellen
         this.canvas = new Canvas(width * 10, height * 10); // Skalierung der Pixel
+    }
+    
+    /**
+	 * Startet den Bildschirm des Retro24
+	 */
+    public void showRetro24Screen(ScreenViewController sc) {
+    	if (retro24Stage != null) {
+    		retro24Stage.close();
+    	}
+    	
+    	retro24Stage = new Stage();
+    	
+    	// GUI-Layout erstellen
+        BorderPane root = new BorderPane();
+        
+        root.setCenter(sc.screenView.getCanvas());
+        
+        // Szene und Stage konfigurieren
+        Scene scene = new Scene(root, 640, 640); // Größe anpassen
+        retro24Stage.setTitle("Retro24");
+        retro24Stage.setScene(scene);
+        retro24Stage.setResizable(false);
+        retro24Stage.show();
+        
+        // Pause für 3 Sekunden, bevor das System gestartet wird
+        // um den Willkommensbildschirm zu zeigen
+        PauseTransition pause = new PauseTransition(Duration.seconds(3));
+        pause.setOnFinished(event -> sc.runSystem());
+        pause.play();
     }
 
     public Canvas getCanvas() {
@@ -64,6 +100,10 @@ public class ScreenView {
     	    if (mode && !brightness) return Color.BLUE;   // Farbe dunkel (Blau)
     	    if (mode && brightness) return Color.YELLOW;  // Farbe hell (Gelb)
     	    return Color.BLACK; // Fallback (sollte nie passieren)
+    	}
+    	
+    	public Stage getStage() {
+    		return this.retro24Stage;
     	}
 } 
 

@@ -150,7 +150,7 @@ public class CPU {
     		setJumped(false);
     		return;
     	}
-
+    	
     	int newIC = unsign(IC) + moveBy;
 
     	// Behalte nur die letzten 16 Bit, dies ermöglicht auch wrap around:

@@ -19,7 +19,7 @@ public class Main {
         retro24.initialize();
 
         // Programm laden:
-        retro24.loadProgramm("/home/eric/pCloudDrive/Studium/Retrocomputing/RETRO24/Programme/Mattis/MS2a.bin");
+        retro24.loadProgramm("/home/eric/Downloads/output(4).bin");
 
         // Erstelle eine Instanz der CPU
         CPU cpu = retro24.getCPU();
