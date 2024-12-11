@@ -158,6 +158,7 @@ public class ScreenViewController {
                 if (now - lastUpdate >= 100_000_000) { // 100 Millisekunden in Nanosekunden
                     Platform.runLater(() -> {
                         updateMemoryDumpTextArea();
+                        updateInstructionLogTextArea();
                     });
                     lastUpdate = now;
                 }
@@ -229,6 +230,20 @@ public class ScreenViewController {
 	    currentDump.append(dumpMemory(getRetro24(), dumpMemoryFrom, dumpMemoryTo));
 
 	    controlPanelController.updateMemoryDumpTextArea(currentDump.toString());
+	}
+	
+	/**
+	 * Live Updaten der Textarea in der CPU Instruktionen angezeigt werden:
+	 */
+	public void updateInstructionLogTextArea() {
+		if (!instructionInfoLog) return;
+	    StringBuilder instructionLog = new StringBuilder();
+	    
+	    instructionLog.append(System.lineSeparator());
+		instructionLog.append("### Instruction Number: " + currentInstruction + " ###" + System.lineSeparator());
+		instructionLog.append(dumpLastCPUInstruction(getRetro24()));
+		
+	    controlPanelController.updateInstructionInfoTextArea(instructionLog.toString());
 	}
 	
 	/**

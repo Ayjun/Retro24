@@ -67,14 +67,14 @@
                   <Image url="@304307.png" />
                </image>
             </ImageView>
-            <TextFlow fx:id="instructionInfoFlow" layoutX="6.0" layoutY="225.0" prefHeight="350.0" prefWidth="224.0" textAlignment="CENTER">
+            <TextFlow fx:id="instructionInfoFlow" layoutX="5.0" layoutY="225.0" prefHeight="339.0" prefWidth="248.0" textAlignment="CENTER">
                <children>
-                  <TextArea fx:id="instructionInfoText" prefHeight="352.0" prefWidth="243.0" visible="false" />
+                  <TextArea fx:id="instructionInfoText" prefHeight="353.0" prefWidth="245.0" style="-fx-font-family: monospace;" />
                </children>
             </TextFlow>
-            <TextFlow fx:id="memoryDumpFlow" layoutX="260.0" layoutY="225.0" prefHeight="360.0" prefWidth="578.0" textAlignment="CENTER" visible="false">
+            <TextFlow fx:id="memoryDumpFlow" layoutX="253.0" layoutY="225.0" prefHeight="360.0" prefWidth="578.0" textAlignment="CENTER">
                <children>
-                  <TextArea fx:id="memoryDumpText" prefHeight="353.0" prefWidth="571.0" style="-fx-font-family: monospace;" visible="false" />
+                  <TextArea fx:id="memoryDumpText" prefHeight="353.0" prefWidth="571.0" style="-fx-font-family: monospace;" />
                </children>
             </TextFlow>
             <TextField fx:id="vonMemoryDumpInput" layoutX="707.0" layoutY="138.0" prefHeight="26.0" prefWidth="117.0" visible="false" />

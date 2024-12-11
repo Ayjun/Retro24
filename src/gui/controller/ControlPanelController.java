@@ -212,16 +212,6 @@ public class ControlPanelController {
  	}
  	
  	
- 	public void updateInstructionInfo() {
- 		/**
- 		 * @TODO IMPLEMENTIEREN!
- 		 */
- 		String opcodeInfo = "";
- 		if (!instructionInfoCheckBox.isSelected()) {
- 			return;
- 		}
- 	}
- 	
  	public void setScreenViewController(ScreenViewController screenViewController) {
  		this.sc = screenViewController;
  	}
