@@ -19,7 +19,7 @@ public class ControlPanelView extends Application{
 		 	this.primaryStage = primaryStage;
 		 
 	        // FXML-Datei laden
-	        FXMLLoader loader = new FXMLLoader(getClass().getResource("/resources/Retro24ControlPanel.fxml"));
+	        FXMLLoader loader = new FXMLLoader(getClass().getResource("/resources/Retro24ControlPanelNew.fxml"));
 	        
 	        Parent root = null;
 	        

@@ -14,6 +14,9 @@ import core.graphics.GraphicChip;
  * @author Eric Schneider
  */
 public class Retro24 {
+	
+	public static final int MEMORYSTART = 0x0000;
+	public static final int MEMORYEND = 0xFFFF;
 
 	private byte[] memory;
 	private CPU cpu;

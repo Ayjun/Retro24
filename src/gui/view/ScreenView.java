@@ -42,7 +42,7 @@ public class ScreenView {
     	// GUI-Layout erstellen
         BorderPane root = new BorderPane();
         
-        root.setCenter(sc.screenView.getCanvas());
+        root.setCenter(canvas);
         
         // Szene und Stage konfigurieren
         Scene scene = new Scene(root, 640, 640); // Größe anpassen
