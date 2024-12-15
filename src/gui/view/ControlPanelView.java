@@ -38,9 +38,9 @@ public class ControlPanelView extends Application{
 	        
 			// Szene erstellen
 	        Scene scene = new Scene(root);
-	       
-
+	        
 	        // Stage konfigurieren
+	        primaryStage.setResizable(false);
 	        primaryStage.setTitle("Retro24 Control Panel");
 	        primaryStage.setScene(scene);
 	        primaryStage.show();

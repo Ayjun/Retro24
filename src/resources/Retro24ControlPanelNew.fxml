@@ -49,14 +49,14 @@
   <children>
     <AnchorPane maxHeight="-1.0" maxWidth="-1.0" prefHeight="176.0" prefWidth="391.0" VBox.vgrow="ALWAYS">
       <children>
-            <Button fx:id="startButton" layoutX="35.0" layoutY="147.0" mnemonicParsing="false" onMouseClicked="#handleStartButtonClick" prefHeight="50.0" prefWidth="149.0" text="       START" textAlignment="CENTER" />
-            <TextField fx:id="pathInputText" layoutX="35.0" layoutY="72.0" onMouseClicked="#handlePathInputTextClick" prefHeight="27.0" prefWidth="747.0" text="Programmpfad" />
-            <Button fx:id="lookForFileButton" layoutX="795.0" layoutY="73.0" mnemonicParsing="false" onMouseClicked="#handleLookForFileButtonClick" text="..." />
+            <Button fx:id="startButton" layoutX="8.0" layoutY="147.0" mnemonicParsing="false" onMouseClicked="#handleStartButtonClick" prefHeight="50.0" prefWidth="149.0" text="       START" textAlignment="CENTER" />
+            <TextField fx:id="pathInputText" layoutX="8.0" layoutY="72.0" onMouseClicked="#handlePathInputTextClick" prefHeight="27.0" prefWidth="747.0" text="Programmpfad" />
+            <Button fx:id="lookForFileButton" layoutX="793.0" layoutY="73.0" mnemonicParsing="false" onMouseClicked="#handleLookForFileButtonClick" text="..." />
             <CheckBox fx:id="memoryDumpCheckBox" layoutX="707.0" layoutY="113.0" mnemonicParsing="false" onMouseReleased="#handleCheckMemoryDumpCheckBox" text="Memory Dump" />
-            <CheckBox fx:id="instructionInfoCheckBox" layoutX="35.0" layoutY="113.0" mnemonicParsing="false" onMouseReleased="#handleCheckInstructionInfoCheckBox" text="CPU Instruktionen Info" />
-            <CheckBox fx:id="haltCPUCheckBox" layoutX="363.0" layoutY="113.0" mnemonicParsing="false" onMouseReleased="#handleCheckHaltCPUCheckBox" text="CPU halten" />
-            <Polygon fill="#20c7366f" layoutX="86.0" layoutY="182.0" points="-50.0, 40.0, 50.0, 40.0, 0.0, -60.0" rotate="90.0" scaleX="0.2" scaleY="0.2" scaleZ="0.5" stroke="BLACK" strokeType="INSIDE" />
-            <Text layoutX="37.0" layoutY="58.0" strokeType="OUTSIDE" strokeWidth="0.0" text="Programm starten:">
+            <CheckBox fx:id="instructionInfoCheckBox" layoutX="9.0" layoutY="113.0" mnemonicParsing="false" onMouseReleased="#handleCheckInstructionInfoCheckBox" text="CPU Instruktionen Info" />
+            <CheckBox fx:id="haltCPUCheckBox" layoutX="364.0" layoutY="113.0" mnemonicParsing="false" onMouseReleased="#handleCheckHaltCPUCheckBox" text="CPU halten" />
+            <Polygon fill="#20c7366f" layoutX="59.0" layoutY="182.0" points="-50.0, 40.0, 50.0, 40.0, 0.0, -60.0" rotate="90.0" scaleX="0.2" scaleY="0.2" scaleZ="0.5" stroke="BLACK" strokeType="INSIDE" />
+            <Text layoutX="10.0" layoutY="58.0" strokeType="OUTSIDE" strokeWidth="0.0" text="Programm starten:">
                <font>
                   <Font size="18.0" />
                </font>
@@ -69,18 +69,18 @@
             </ImageView>
             <TextFlow fx:id="instructionInfoFlow" layoutX="5.0" layoutY="225.0" prefHeight="339.0" prefWidth="248.0" textAlignment="CENTER">
                <children>
-                  <TextArea fx:id="instructionInfoText" prefHeight="353.0" prefWidth="245.0" style="-fx-font-family: monospace;" />
+                  <TextArea fx:id="instructionInfoText" prefHeight="353.0" prefWidth="245.0" style="-fx-font-family: monospace;" visible="false" />
                </children>
             </TextFlow>
             <TextFlow fx:id="memoryDumpFlow" layoutX="253.0" layoutY="225.0" prefHeight="360.0" prefWidth="578.0" textAlignment="CENTER">
                <children>
-                  <TextArea fx:id="memoryDumpText" prefHeight="353.0" prefWidth="571.0" style="-fx-font-family: monospace;" />
+                  <TextArea fx:id="memoryDumpText" prefHeight="353.0" prefWidth="571.0" style="-fx-font-family: monospace;" visible="false" />
                </children>
             </TextFlow>
-            <TextField fx:id="vonMemoryDumpInput" layoutX="707.0" layoutY="138.0" prefHeight="26.0" prefWidth="117.0" visible="false" />
-            <TextField fx:id="bisMemoryDumpInput" layoutX="707.0" layoutY="169.0" prefHeight="26.0" prefWidth="117.0" visible="false" />
-            <Text fx:id="vonMemoryDumpText" layoutX="672.0" layoutY="156.0" strokeType="OUTSIDE" strokeWidth="0.0" text="Von:" visible="false" wrappingWidth="29.0" />
-            <Text fx:id="bisMemoryDumpText" layoutX="672.0" layoutY="187.0" strokeType="OUTSIDE" strokeWidth="0.0" text="Bis:" visible="false" wrappingWidth="29.0" />
+            <TextField fx:id="vonMemoryDumpInput" layoutX="707.0" layoutY="147.0" prefHeight="26.0" prefWidth="117.0" visible="false" />
+            <TextField fx:id="bisMemoryDumpInput" layoutX="707.0" layoutY="178.0" prefHeight="26.0" prefWidth="117.0" visible="false" />
+            <Text fx:id="vonMemoryDumpText" layoutX="672.0" layoutY="165.0" strokeType="OUTSIDE" strokeWidth="0.0" text="Von:" visible="false" wrappingWidth="29.0" />
+            <Text fx:id="bisMemoryDumpText" layoutX="672.0" layoutY="195.0" strokeType="OUTSIDE" strokeWidth="0.0" text="Bis:" visible="false" wrappingWidth="29.0" />
       </children>
     </AnchorPane>
   </children>

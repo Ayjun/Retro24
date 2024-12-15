@@ -1,9 +1,11 @@
 package gui.controller;
 
 import java.io.File;
-import java.io.FileNotFoundException;
+
+import core.Retro24;
 
 import static util.DebugUtil.*;
+import static util.NumberUtil.*;
 
 import gui.view.ControlPanelView;
 import javafx.fxml.FXML;
@@ -18,6 +20,9 @@ import javafx.stage.FileChooser;
 
 public class ControlPanelController {
 
+	// Der maximale Speicherbereich der beim Memorydump ausgegeben werden kann
+	private static int MAXMEMDUMP = 0xFF;
+	
 	@FXML
 	private Button startButton;
 	@FXML
@@ -53,7 +58,7 @@ public class ControlPanelController {
 	
 	private ControlPanelView controlPanelView;
 	private ScreenViewController sc;
-	
+
 	
 	public void setControlPanelView(ControlPanelView controlPanelView) {
 		this.controlPanelView = controlPanelView;
@@ -105,7 +110,12 @@ public class ControlPanelController {
 	
 	@FXML
 	public void handleClickCPUStepButton() {
-		
+		synchronized (sc.pauseMonitor) {
+	        sc.isPaused = !sc.isPaused; // Pause umschalten
+	        if (!sc.isPaused) {
+	            sc.pauseMonitor.notify(); // Weitermachen
+	        }
+		}
 	}
 
 	/**
@@ -127,19 +137,43 @@ public class ControlPanelController {
 	@FXML 
 	public void handleStartButtonClick() {
 		
+		resetTextAreas();
+		
 		// Wenn es bereits einen screencontroller gab, dann schließe die Stage der zugehörigen View
 		// (Altes Retro24 Fenster schliessen)
 		if (sc!= null) {
 			sc.closeScreen();
 		}
-		
+
 		// Neuen ScreenViewController (steuert Retro24 Instanz) anlegen:
 		sc = new ScreenViewController(this);
 		
-		loadProgram();
+		if (!loadProgram()) {
+			return;
+		}
 		
 		// Falls MemoryDump Checkbox angehakt, die erforderlichen Infos im ScreenViewController setzen:
 		if (isDumpMemorySelected()) {
+			
+			if (getMemoryAddressFrom() == null || getMemoryAddressTo() == null) {
+				return;
+			}
+			
+			if (getMemoryAddressTo() - getMemoryAddressFrom() > MAXMEMDUMP) {
+				controlPanelView.showError("Ungültiger Adressbereich!", "Der maximal erlaubte Adressbereich ist 0xFF lang.");
+				return;
+			}
+			
+			if (checkShortOverflow(getMemoryAddressTo()) || checkShortOverflow(getMemoryAddressFrom())
+					|| checkUnderflow(getMemoryAddressTo()) || checkUnderflow(getMemoryAddressFrom())) {
+				controlPanelView.showError("Ungültige Adresse!", "Die Adressen müssen im Bereich " 
+					+ String.format("0x%02X", Retro24.MEMORYSTART)  
+					+ " bis " 
+					+ String.format("0x%02X", Retro24.MEMORYEND) 
+					+ " liegen!");
+				return;
+			}
+			
 			sc.setDumpMemory(getMemoryAddressFrom(), getMemoryAddressTo());
 		}
 		
@@ -212,6 +246,7 @@ public class ControlPanelController {
  	}
  	
  	
+ 	
  	public void setScreenViewController(ScreenViewController screenViewController) {
  		this.sc = screenViewController;
  	}
@@ -220,62 +255,73 @@ public class ControlPanelController {
  	
  	/**
  	 * Lädt ein Prorgramm vom angegebenen Pfad (Textinput)
+ 	 * @return true wenn erfolgreich, false wenn nicht
  	 */
- 	public void loadProgram() {
+ 	public boolean loadProgram() {
  		String programPath = pathInputText.getText(); // Pfad des zu startenden Programmes aus Input lesen
 		
 		File f = new File(programPath);
 		
 		if (!f.isFile()) {
 			controlPanelView.showError("Programm nicht gefunden!", "Das Programm:\n\n" + programPath + "\n\nkonnte nicht gefunden werden!");
-			return;
+			return false;
 		}
 		
 		sc.setProgramPath(programPath);
+		return true;
  	}
  	
- 	public int getMemoryAddressFrom() {
+ 	public Integer getMemoryAddressFrom() {
  		String address = this.vonMemoryDumpInput.getText();
  		
- 		/**
- 		 * @TODO exceptions zu view.showError machen.
- 		 */
- 	    if (address == null || address.isEmpty()) {
- 	        throw new IllegalArgumentException("Die Adresse darf nicht null oder leer sein.");
+ 		if (address == null || address.isEmpty()) {
+ 	    	controlPanelView.showError("Ungültige Adresse!", "Die Adresse darf nicht leer sein.");
  	    }
 
  	    if (!address.startsWith("0x")) {
- 	        throw new IllegalArgumentException("Die Adresse muss mit '0x' beginnen.");
+ 	    	controlPanelView.showError("Ungültige Adresse!", "Die Adresse muss mit '0x' beginnen.");
  	    }
 
  	    try {
  	        // Entferne den Präfix "0x" und parse den Rest als Hexadezimalwert
  	        return Integer.parseInt(address.substring(2), 16);
- 	    } catch (NumberFormatException e) {
- 	        throw new IllegalArgumentException("Die Adresse ist kein gültiger Hexadezimalwert: " + address, e);
+ 	    } catch (Exception e) {
+ 	    	controlPanelView.showError("Ungültige Adresse!", "Die Adresse ist kein gültiger Hexadezimalwert: " + address.toString());
  	    }
+ 	    
+ 	    return null;
  	}
  	
- 	public int getMemoryAddressTo() {
+ 	public Integer getMemoryAddressTo() {
  		String address = this.bisMemoryDumpInput.getText();
  		
- 		/**
- 		 * @TODO exceptions zu view.showError machen.
- 		 */
  	    if (address == null || address.isEmpty()) {
- 	        throw new IllegalArgumentException("Die Adresse darf nicht null oder leer sein.");
+ 	    	controlPanelView.showError("Ungültige Adresse!", "Die Adresse darf nicht leer sein.");
+ 	    	return null;
  	    }
 
- 	    if (!address.startsWith("0x")) {
- 	        throw new IllegalArgumentException("Die Adresse muss mit '0x' beginnen.");
+ 	   if (!address.startsWith("0x")) {
+ 	    	controlPanelView.showError("Ungültige Adresse!", "Die Adresse muss mit '0x' beginnen.");
+ 	    	return null;
  	    }
 
  	    try {
  	        // Entferne den Präfix "0x" und parse den Rest als Hexadezimalwert
  	        return Integer.parseInt(address.substring(2), 16);
  	    } catch (NumberFormatException e) {
- 	        throw new IllegalArgumentException("Die Adresse ist kein gültiger Hexadezimalwert: " + address, e);
+ 	    	controlPanelView.showError("Ungültige Adresse!", "Die Adresse ist kein gültiger Hexadezimalwert: " + address.toString());
  	    }
+ 	    
+ 	    return null;
+ 	}
+ 	
+ 	
+ 	/**
+ 	 * Resettet die Textareas
+ 	 */
+ 	public void resetTextAreas() {
+ 		this.instructionInfoText.clear();
+ 		this.memoryDumpText.clear();
  	}
  	
  	public void appendToMemoryDumpText(String dump) {

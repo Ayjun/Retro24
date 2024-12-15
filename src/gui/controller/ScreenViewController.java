@@ -1,6 +1,7 @@
 package gui.controller;
 
 import static util.DebugUtil.*;
+import static util.StringUtil.*;
 
 import core.Retro24;
 import core.CPU.CPU;
@@ -13,6 +14,7 @@ import javafx.application.Platform;
 import javafx.concurrent.Task;
 import javafx.scene.Node;
 import javafx.util.Duration;
+import util.Log;
 
 /**
  * Schnittstelle zwischen Retro24 System und der View, steuert das Model und die View.
@@ -29,14 +31,16 @@ public class ScreenViewController {
 	private final boolean dumpMemory;
 	private int dumpMemoryFrom;
 	private int dumpMemoryTo;
-	private StringBuilder memoryLog;
+	private Log memoryLog;
 	
 	private final boolean instructionInfoLog;
-	private StringBuilder instructionLog;
+	private Log instructionLog;
 	
 	private final boolean cpuStepMode;
 	
 	private int currentInstruction = 0;
+	
+	private AnimationTimer guiUpdater; 
 	
 	public ScreenViewController(ControlPanelController controlPanelController) {
 		this.controlPanelController = controlPanelController;
@@ -52,12 +56,12 @@ public class ScreenViewController {
 		updateView();
 	}
 	
-	public void initializeLogs() {
+	private void initializeLogs() {
 		if (dumpMemory) {
-			this.memoryLog = new StringBuilder();
+			this.memoryLog = new Log();
 		}
 		if (instructionInfoLog) {
-			this.instructionLog = new StringBuilder();
+			this.instructionLog = new Log();
 		}
 	}
 	
@@ -106,7 +110,7 @@ public class ScreenViewController {
 	/**
 	 * Startet das Retro24 System mit dem angegebenen Programm
 	 */
-	public void runSystem() {
+	public void runSystemNoDebug() {
 	    // Wenn die Stage (retro24 screen) geschlossen wird, beende auch die CPU.
 	    screenView.getStage().setOnCloseRequest((close) -> stopSystem());
 
@@ -134,6 +138,7 @@ public class ScreenViewController {
 	            
 	         // Letztes Update der GUI nach Beendigung der Emulation
 	            Platform.runLater(() -> {
+	            	guiUpdater.stop(); // St
 	            	finalLogUpdate();
 	            });
 	            
@@ -141,9 +146,93 @@ public class ScreenViewController {
 	        }
 	    };
 	    
+        // GUI-Updates periodisch mit AnimationTimer
+        guiUpdater = new AnimationTimer() {
+            private long lastUpdate = 0;
+
+            @Override
+            public void handle(long now) {
+            	if (cpu.isHalted()) {
+            		this.stop();
+            	}
+            	
+                // Update alle 100 Millisekunden (~10 FPS)
+                if (now - lastUpdate >= 100_000_000) { // 100 Millisekunden in Nanosekunden
+                    Platform.runLater(() -> {
+                        updateMemoryDumpTextArea();
+                        updateInstructionLogTextArea();
+                    });
+                    lastUpdate = now;
+                }
+            }
+        };
+
+	    // Task in einem neuen Thread starten
+	    Thread systemThread = new Thread(systemTask);
+	    systemThread.setDaemon(true); // Beende den Thread automatisch beim Schließen der App
+	    systemThread.start();
+	    guiUpdater.start();
+	}
+	
+	
+	public void runSystem() {
+		if (cpuStepMode) {
+			runSystemDebug();
+		}
+		else {
+			runSystemNoDebug();
+		}
+	}
+	
+	
+	// TODO public wegmachen!
+	public final Object pauseMonitor = new Object();
+	public boolean isPaused = true;
+	/**
+	 * Startet das Retro24 System mit dem angegebenen Programm im Debug Modus (CPU halten)
+	 */
+	public void runSystemDebug() {
+	    // Wenn die Stage (retro24 screen) geschlossen wird, beende auch die CPU.
+	    screenView.getStage().setOnCloseRequest((close) -> stopSystem());
+
+	    // Programm laden:
+	    retro24.loadProgramm(programPath);
+
+	    // Task für den Retro24-Hintergrundprozess erstellen
+	    Task<Void> systemTask = new Task<>() {
+	        @Override
+	        protected Void call() throws Exception {
+	            // Title Screen zurücksetzen:
+	            graphicChip.resetVidMem();
+	            updateView();
+
+	            // Mainloop, solange CPU nicht anhält:
+	            while (!cpu.isHalted()) {
+	            	incrementInstructionCounter();
+	                retro24.runNextInstruction();
+	                updateView();
+	                updateLogs();
+	                synchronized (pauseMonitor) {
+	                    while (isPaused) {
+	                        pauseMonitor.wait(); // Warte, bis der Knopf gedrückt wird
+	                    }
+	                    isPaused = true;
+	                }
+	                
+	                // TODO ÄNDERN AUF ANDERE METHODE ZUR FREQUENZ SIMULATION
+	                Thread.sleep(10);
+	            }
+	            
+	         // Letztes Update der GUI nach Beendigung der Emulation
+	            Platform.runLater(() -> {
+	            	guiUpdater.stop(); // St
+	            	finalLogUpdate();
+	            });
+	            
+	            return null;
+	        }
+	    };
 	    
-	    
-	    AnimationTimer guiUpdater; 
         // GUI-Updates periodisch mit AnimationTimer
         guiUpdater = new AnimationTimer() {
             private long lastUpdate = 0;
@@ -203,9 +292,12 @@ public class ScreenViewController {
 	 */
 	private void updateMemoryLog() {
 		if (!dumpMemory) return;
-		memoryLog.append(System.lineSeparator());
-		memoryLog.append("########### Instruction Number: " + currentInstruction + " ###########" + System.lineSeparator());
-		memoryLog.append(dumpMemory(getRetro24(), dumpMemoryFrom, dumpMemoryTo));
+		
+		StringBuilder currentMemoryLogEntry = new StringBuilder();
+		currentMemoryLogEntry.append("########### Instruction Number: " + currentInstruction + " ###########" + System.lineSeparator());
+		currentMemoryLogEntry.append(dumpMemory(getRetro24(), dumpMemoryFrom, dumpMemoryTo));
+		
+		memoryLog.offer(currentMemoryLogEntry.toString());
 	}
 	
 	/** 
@@ -213,37 +305,30 @@ public class ScreenViewController {
 	 */
 	private void updateInstructionLog() {
 		if (!instructionInfoLog) return;
-		instructionLog.append(System.lineSeparator());
-		instructionLog.append("### Instruction Number: " + currentInstruction + " ###" + System.lineSeparator());
-		instructionLog.append(dumpLastCPUInstruction(getRetro24()));
+		
+		StringBuilder currentInstructionLogEntry = new StringBuilder();
+		currentInstructionLogEntry.append("### Instruction Number: " + currentInstruction + System.lineSeparator());
+		currentInstructionLogEntry.append("##  " + cpu.getLastInstruction() + " " + byteArrayToString(cpu.getLastInstruction().getArgs()) + System.lineSeparator());
+		currentInstructionLogEntry.append(dumpLastCPUInstruction(getRetro24()));
+		instructionLog.offer(currentInstructionLogEntry.toString());
 	}
 
 	/**
 	 * Live Updaten der Textarea in der der Memorydump angezeigt wird:
 	 */
 	public void updateMemoryDumpTextArea() {
-	    if (!dumpMemory) return;
-	    StringBuilder currentDump = new StringBuilder();
+	    if (!dumpMemory || memoryLog.peekLast() == null) return;
 	    
-	    currentDump.append(System.lineSeparator());
-	    currentDump.append("########### Instruction Number: " + currentInstruction + " ###########" + System.lineSeparator());
-	    currentDump.append(dumpMemory(getRetro24(), dumpMemoryFrom, dumpMemoryTo));
-
-	    controlPanelController.updateMemoryDumpTextArea(currentDump.toString());
+	    controlPanelController.updateMemoryDumpTextArea(System.lineSeparator() + memoryLog.peekLast());
 	}
 	
 	/**
 	 * Live Updaten der Textarea in der CPU Instruktionen angezeigt werden:
 	 */
 	public void updateInstructionLogTextArea() {
-		if (!instructionInfoLog) return;
-	    StringBuilder instructionLog = new StringBuilder();
-	    
-	    instructionLog.append(System.lineSeparator());
-		instructionLog.append("### Instruction Number: " + currentInstruction + " ###" + System.lineSeparator());
-		instructionLog.append(dumpLastCPUInstruction(getRetro24()));
+		if (!instructionInfoLog || instructionLog.peekLast() == null) return;
 		
-	    controlPanelController.updateInstructionInfoTextArea(instructionLog.toString());
+	    controlPanelController.updateInstructionInfoTextArea(instructionLog.peekLast() + System.lineSeparator());
 	}
 	
 	/**
@@ -275,7 +360,9 @@ public class ScreenViewController {
 		this.retro24.getCPU().setHalt(true);
 		
 		// Bildschirm schliessen:
-		this.screenView.getStage().close();
+		if (this.screenView.getStage() != null) {
+			this.screenView.getStage().close();
+		}
 	}
 	
 	public void stopSystem() {
