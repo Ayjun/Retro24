@@ -3,6 +3,8 @@ package core.CPU;
 import static core.CPU.Instruction.HLT;
 import static core.CPU.Instruction.getInstruction;
 import static util.NumberUtil.*;
+import static core.Retro24.TICKADDRESS;
+import static core.Retro24.TOCKADDRESS;
 
 import core.Retro24;
 
@@ -23,6 +25,10 @@ public class CPU {
 	private short AR;
 
 	private Instruction lastInstruction = HLT;
+	
+	// Tick & Tock
+	private byte tick;
+	private byte tock;
 
 	// Ist CPU angehalten?
 	private boolean halt = false;
@@ -47,6 +53,9 @@ public class CPU {
     	R3 = 0x00;
     	IC = 0x0100;
     	AR = 0x0000;
+    	
+    	tick = 0x00;
+    	tock = (byte)0xFF;
     }
 
     /**
@@ -61,11 +70,12 @@ public class CPU {
     	Instruction newInstruction = getInstruction(opcode);
     	newInstruction.execute(this);
     	moveIC(newInstruction.getLength());
+    	tickTock();
     	setLastInstruction(newInstruction);
     }
 
 	public void writeMemory(int address, byte data) {
-		this.retro24.writeMemory(AR, R0);
+		this.retro24.writeMemory(address, data);
 	}
 	
 	/**
@@ -155,6 +165,18 @@ public class CPU {
 
     	// Behalte nur die letzten 16 Bit, dies ermöglicht auch wrap around:
     	IC = trimToShort(newIC);
+    }
+    
+    /**
+     * Aktualisiert tick und tock und speichert die Werte an entsprecehenden Stellen
+     */
+    private void tickTock() {
+    	tick = trimToByte(addU(tick, 1));
+    	if (!checkUnderflow(subU(tock, 1))) {
+    		tock = trimToByte(subU(tock, 1));
+    	}
+    	writeMemory(TICKADDRESS, tick);
+    	writeMemory(TOCKADDRESS, tock);
     }
     
     public boolean hasJumped() {

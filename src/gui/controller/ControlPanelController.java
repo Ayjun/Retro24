@@ -7,6 +7,7 @@ import core.Retro24;
 import static util.NumberUtil.*;
 
 import gui.view.ControlPanelView;
+import javafx.animation.Animation.Status;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
@@ -20,6 +21,7 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.MouseButton;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import javafx.stage.FileChooser;
@@ -62,6 +64,8 @@ public class ControlPanelController {
 	private Text vonMemoryDumpText;
 	@FXML
 	private Text bisMemoryDumpText;
+	@FXML
+	private Text einrastenText;
 	
 	private ControlPanelView controlPanelView;
 	private ScreenViewController sc;
@@ -94,10 +98,28 @@ public class ControlPanelController {
         timeline.getKeyFrames().add(keyFrame);
 
         // Starten der Timeline beim Drücken der Maustaste
-        cpuStepButton.setOnMousePressed(event -> timeline.play());
+        cpuStepButton.setOnMousePressed((event) -> {
+        	if (event.getButton() == MouseButton.PRIMARY) {
+        		timeline.play();
+        	}
+        });
 
         // Stoppen der Timeline beim Loslassen der Maustaste
-        cpuStepButton.setOnMouseReleased(event -> timeline.stop());
+        cpuStepButton.setOnMouseReleased((event) -> {
+        	if (event.getButton() == MouseButton.PRIMARY) {
+        		timeline.stop();
+        	}
+        });
+        
+        // Einrasten der Timeline bei Rechtsklick
+        cpuStepButton.setOnMouseClicked((event) -> {
+        	if (event.getButton() == MouseButton.SECONDARY && timeline.getStatus() == Status.STOPPED) {
+        		timeline.play();
+        	}
+        	else if (event.getButton() == MouseButton.SECONDARY && timeline.getStatus() == Status.RUNNING) {
+        		timeline.stop();
+        	}
+        });
 	}
 
 	public void setControlPanelView(ControlPanelView controlPanelView) {
@@ -112,10 +134,12 @@ public class ControlPanelController {
 		if (haltCPUCheckBox.isSelected()) {
 			cpuStepButton.setVisible(true);
 			cpuStepButtonImage.setVisible(true);
+			einrastenText.setVisible(true);
 			return;
 		}
 		cpuStepButton.setVisible(false);
 		cpuStepButtonImage.setVisible(false);
+		einrastenText.setVisible(false);
 	}
 	
 	@FXML

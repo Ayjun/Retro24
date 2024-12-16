@@ -81,6 +81,7 @@
             <TextField fx:id="bisMemoryDumpInput" layoutX="707.0" layoutY="178.0" prefHeight="26.0" prefWidth="117.0" visible="false" />
             <Text fx:id="vonMemoryDumpText" layoutX="672.0" layoutY="165.0" strokeType="OUTSIDE" strokeWidth="0.0" text="Von:" visible="false" wrappingWidth="29.0" />
             <Text fx:id="bisMemoryDumpText" layoutX="672.0" layoutY="195.0" strokeType="OUTSIDE" strokeWidth="0.0" text="Bis:" visible="false" wrappingWidth="29.0" />
+            <Text fx:id="einrastenText" fill="#6f6969" layoutX="336.0" layoutY="213.0" strokeType="OUTSIDE" strokeWidth="0.0" text="(Rechtsklick = Einrasten)" visible="false" />
       </children>
     </AnchorPane>
   </children>

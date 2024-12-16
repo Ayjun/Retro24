@@ -25,6 +25,11 @@ import util.Log;
  * @author Eric Schneider
  */
 public class ScreenViewController {
+	/**
+	 * Die CPU-Frequenz in Hz
+	 */
+	public static final int CPUFREQUENCY = 100;
+	
 	private final Retro24 retro24;
 	private final GraphicChip graphicChip;
 	private final CPU cpu;
@@ -128,6 +133,7 @@ public class ScreenViewController {
 	 */
 	private void afterRun() {
 		systemRunning.set(false);
+		this.cpu.setHalt(true);
 		Platform.runLater(() -> {
 			if (guiUpdater != null) {
 				guiUpdater.stop();
@@ -142,16 +148,24 @@ public class ScreenViewController {
 	 * @throws InterruptedException 
 	 */
 	private void mainLoop() throws InterruptedException {
-		// Mainloop, solange CPU nicht anhält:
-        while (!cpu.isHalted()) {
-        	incrementInstructionCounter();
-            retro24.runNextInstruction();
-            updateView();
-            updateLogs();
-            
-            // TODO ÄNDERN AUF ANDERE METHODE ZUR FREQUENZ SIMULATION
-            Thread.sleep(10);
-        }
+	    final long targetCycleDurationNanos = 1_000_000_000 / CPUFREQUENCY ; // Zeit eines Taktes in Nanosekunden
+	    while (!cpu.isHalted()) {
+	        long cycleStartTime = System.nanoTime(); // Startzeit des Zyklus
+
+	        incrementInstructionCounter();
+	        retro24.runNextInstruction();
+	        updateView();
+	        updateLogs();
+
+	        long elapsedTime = System.nanoTime() - cycleStartTime; // Verstrichene Zeit in Nanosekunden
+	        long sleepTime = targetCycleDurationNanos - elapsedTime; // Verbleibende Zeit berechnen
+
+	        if (sleepTime > 0) {
+	            Thread.sleep(sleepTime / 1_000_000, (int) (sleepTime % 1_000_000)); // Schlafzeit in Millisekunden und Nanosekunden
+	            // Debugging Info:
+	            // System.out.println((System.nanoTime() - cycleStartTime) / 1000 + " mikrosekunden Zyklus");
+	        } 
+	    }
 	}
 
 	/**
@@ -242,8 +256,7 @@ public class ScreenViewController {
 	        	
 	            // Mainloop, solange CPU nicht anhält:
 	            while (!cpu.isHalted()) {
-	            	
-	            	
+
 	            	stepButtonPressed.set(false);
 	            	incrementInstructionCounter();
 	                retro24.runNextInstruction();
@@ -260,9 +273,7 @@ public class ScreenViewController {
 	            		Thread.sleep(100);
 	            	}
 	            	
-	            	
-	                // TODO ÄNDERN AUF ANDERE METHODE ZUR FREQUENZ SIMULATION
-	                Thread.sleep(30);
+	                Thread.sleep(10);
 	            }
 	            
 	            afterRun();

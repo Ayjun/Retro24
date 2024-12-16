@@ -17,6 +17,9 @@ public class Retro24 {
 	
 	public static final int MEMORYSTART = 0x0000;
 	public static final int MEMORYEND = 0xFFFF;
+	
+	public static final int TICKADDRESS = 0x0010;
+	public static final int TOCKADDRESS = 0x0011;
 
 	private byte[] memory;
 	private CPU cpu;
