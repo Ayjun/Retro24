@@ -4,10 +4,16 @@ import java.io.File;
 
 import core.Retro24;
 
-import static util.DebugUtil.*;
 import static util.NumberUtil.*;
 
 import gui.view.ControlPanelView;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
+import javafx.application.Platform;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
@@ -17,6 +23,7 @@ import javafx.scene.image.ImageView;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import javafx.stage.FileChooser;
+import javafx.util.Duration;
 
 public class ControlPanelController {
 
@@ -58,8 +65,41 @@ public class ControlPanelController {
 	
 	private ControlPanelView controlPanelView;
 	private ScreenViewController sc;
-
 	
+	private BooleanProperty cpuDoStepTriggered = new SimpleBooleanProperty();
+	
+	public void beforeStart() {
+		bindProperties();
+		initHandlers();
+	}
+	
+	public void bindProperties() {
+		haltCPUCheckBox.disableProperty().bind(sc.isSystemRunningProperty());
+		instructionInfoCheckBox.disableProperty().bind(sc.isSystemRunningProperty());
+		memoryDumpCheckBox.disableProperty().bind(sc.isSystemRunningProperty());
+		vonMemoryDumpInput.disableProperty().bind(sc.isSystemRunningProperty());
+		bisMemoryDumpInput.disableProperty().bind(sc.isSystemRunningProperty());
+	}
+	
+	public void initHandlers() {
+        
+		// Timeline erstellen
+        Timeline timeline = new Timeline();
+        timeline.setCycleCount(Timeline.INDEFINITE); // Wiederholen, solange aktiv
+        
+        // KeyFrame hinzufügen
+        KeyFrame keyFrame = new KeyFrame(Duration.millis(30), e -> {
+        	cpuDoStepTriggered.set(true);
+        });
+        timeline.getKeyFrames().add(keyFrame);
+
+        // Starten der Timeline beim Drücken der Maustaste
+        cpuStepButton.setOnMousePressed(event -> timeline.play());
+
+        // Stoppen der Timeline beim Loslassen der Maustaste
+        cpuStepButton.setOnMouseReleased(event -> timeline.stop());
+	}
+
 	public void setControlPanelView(ControlPanelView controlPanelView) {
 		this.controlPanelView = controlPanelView;
 	}
@@ -98,6 +138,8 @@ public class ControlPanelController {
 			bisMemoryDumpText.setVisible(true);
 			memoryDumpFlow.setVisible(true);
 			memoryDumpText.setVisible(true);
+			vonMemoryDumpInput.setText("0x0100");
+			bisMemoryDumpInput.setText("0x01FF");
 			return;
 		}
 		vonMemoryDumpInput.setVisible(false);
@@ -108,16 +150,6 @@ public class ControlPanelController {
 		memoryDumpText.setVisible(false);
 	}
 	
-	@FXML
-	public void handleClickCPUStepButton() {
-		synchronized (sc.pauseMonitor) {
-	        sc.isPaused = !sc.isPaused; // Pause umschalten
-	        if (!sc.isPaused) {
-	            sc.pauseMonitor.notify(); // Weitermachen
-	        }
-		}
-	}
-
 	/**
 	 * Behandelt den Click auf das Pfadeingabefeld im Retro24 ControlPanel
 	 */
@@ -136,7 +168,6 @@ public class ControlPanelController {
 	 */
 	@FXML 
 	public void handleStartButtonClick() {
-		
 		resetTextAreas();
 		
 		// Wenn es bereits einen screencontroller gab, dann schließe die Stage der zugehörigen View
@@ -177,9 +208,10 @@ public class ControlPanelController {
 			sc.setDumpMemory(getMemoryAddressFrom(), getMemoryAddressTo());
 		}
 		
+		beforeStart();
 		// Bildschirm des Retro24 anzeigen:
 		sc.showScreen();
-	
+		
 	}
 	
 	public void handleLookForFileButtonClick() {
@@ -339,4 +371,9 @@ public class ControlPanelController {
  	public boolean isCPUHaltenSelected() {
  		return this.haltCPUCheckBox.isSelected();
  	}
+ 	
+ 	public BooleanProperty getCPUStepActivity() {
+ 		return this.cpuDoStepTriggered;
+ 	}
+ 	
 }

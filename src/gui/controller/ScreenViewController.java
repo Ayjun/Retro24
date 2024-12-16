@@ -3,6 +3,8 @@ package gui.controller;
 import static util.DebugUtil.*;
 import static util.StringUtil.*;
 
+import org.junit.internal.runners.statements.RunAfters;
+
 import core.Retro24;
 import core.CPU.CPU;
 import core.graphics.GraphicChip;
@@ -11,6 +13,8 @@ import javafx.animation.AnimationTimer;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.concurrent.Task;
 import javafx.scene.Node;
 import javafx.util.Duration;
@@ -40,9 +44,12 @@ public class ScreenViewController {
 	
 	private int currentInstruction = 0;
 	
-	private AnimationTimer guiUpdater; 
+	private AnimationTimer guiUpdater;
+	
+	private BooleanProperty systemRunning;
 	
 	public ScreenViewController(ControlPanelController controlPanelController) {
+		systemRunning = new SimpleBooleanProperty(true);
 		this.controlPanelController = controlPanelController;
 		this.screenView = new ScreenView(GraphicChip.PIXELWIDTH, GraphicChip.PIXELHEIGHT, 0x0000, 0x1000);
 		this.retro24 = new Retro24();
@@ -106,13 +113,54 @@ public class ScreenViewController {
 	    timeline.play();
 	}
 	
+	
+	/**
+	 * Wird vor dem Systemstart ausgeführt
+	 */
+	private void beforeRun() {
+		// Title Screen zurücksetzen:
+        graphicChip.resetVidMem();
+        updateView();
+	}
+	
+	/**
+	 * Wird nach dem Systemstart ausgeführt
+	 */
+	private void afterRun() {
+		systemRunning.set(false);
+		Platform.runLater(() -> {
+			if (guiUpdater != null) {
+				guiUpdater.stop();
+			}
+        	finalLogUpdate(); // Letztes Update der GUI nach Beendigung der Emulation
+        });
+		
+	}
+	
+	/**
+	 * Hauptschleife in der das System läuft
+	 * @throws InterruptedException 
+	 */
+	private void mainLoop() throws InterruptedException {
+		// Mainloop, solange CPU nicht anhält:
+        while (!cpu.isHalted()) {
+        	incrementInstructionCounter();
+            retro24.runNextInstruction();
+            updateView();
+            updateLogs();
+            
+            // TODO ÄNDERN AUF ANDERE METHODE ZUR FREQUENZ SIMULATION
+            Thread.sleep(10);
+        }
+	}
 
 	/**
 	 * Startet das Retro24 System mit dem angegebenen Programm
+	 * @throws InterruptedException 
 	 */
 	public void runSystemNoDebug() {
 	    // Wenn die Stage (retro24 screen) geschlossen wird, beende auch die CPU.
-	    screenView.getStage().setOnCloseRequest((close) -> stopSystem());
+	    screenView.getStage().setOnCloseRequest((close) -> afterRun());
 
 	    // Programm laden:
 	    retro24.loadProgramm(programPath);
@@ -120,27 +168,13 @@ public class ScreenViewController {
 	    // Task für den Retro24-Hintergrundprozess erstellen
 	    Task<Void> systemTask = new Task<>() {
 	        @Override
-	        protected Void call() throws Exception {
-	            // Title Screen zurücksetzen:
-	            graphicChip.resetVidMem();
-	            updateView();
+	        protected Void call() throws InterruptedException  {
+	        	
+	        	beforeRun();
 
-	            // Mainloop, solange CPU nicht anhält:
-	            while (!cpu.isHalted()) {
-	            	incrementInstructionCounter();
-	                retro24.runNextInstruction();
-	                updateView();
-	                updateLogs();
-	                
-	                // TODO ÄNDERN AUF ANDERE METHODE ZUR FREQUENZ SIMULATION
-	                Thread.sleep(10);
-	            }
+	            mainLoop();
 	            
-	         // Letztes Update der GUI nach Beendigung der Emulation
-	            Platform.runLater(() -> {
-	            	guiUpdater.stop(); // St
-	            	finalLogUpdate();
-	            });
+	            afterRun();
 	            
 	            return null;
 	        }
@@ -185,15 +219,16 @@ public class ScreenViewController {
 	}
 	
 	
-	// TODO public wegmachen!
-	public final Object pauseMonitor = new Object();
-	public boolean isPaused = true;
 	/**
 	 * Startet das Retro24 System mit dem angegebenen Programm im Debug Modus (CPU halten)
 	 */
 	public void runSystemDebug() {
+		
+		BooleanProperty stepButtonPressed = new SimpleBooleanProperty();
+		stepButtonPressed.bindBidirectional(controlPanelController.getCPUStepActivity());
+		
 	    // Wenn die Stage (retro24 screen) geschlossen wird, beende auch die CPU.
-	    screenView.getStage().setOnCloseRequest((close) -> stopSystem());
+	    screenView.getStage().setOnCloseRequest((close) -> afterRun());
 
 	    // Programm laden:
 	    retro24.loadProgramm(programPath);
@@ -202,63 +237,44 @@ public class ScreenViewController {
 	    Task<Void> systemTask = new Task<>() {
 	        @Override
 	        protected Void call() throws Exception {
-	            // Title Screen zurücksetzen:
-	            graphicChip.resetVidMem();
-	            updateView();
-
+	      
+	        	beforeRun();
+	        	
 	            // Mainloop, solange CPU nicht anhält:
 	            while (!cpu.isHalted()) {
+	            	
+	            	
+	            	stepButtonPressed.set(false);
 	            	incrementInstructionCounter();
 	                retro24.runNextInstruction();
 	                updateView();
 	                updateLogs();
-	                synchronized (pauseMonitor) {
-	                    while (isPaused) {
-	                        pauseMonitor.wait(); // Warte, bis der Knopf gedrückt wird
-	                    }
-	                    isPaused = true;
-	                }
 	                
-	                // TODO ÄNDERN AUF ANDERE METHODE ZUR FREQUENZ SIMULATION
-	                Thread.sleep(10);
-	            }
-	            
-	         // Letztes Update der GUI nach Beendigung der Emulation
-	            Platform.runLater(() -> {
-	            	guiUpdater.stop(); // St
-	            	finalLogUpdate();
-	            });
-	            
-	            return null;
-	        }
-	    };
-	    
-        // GUI-Updates periodisch mit AnimationTimer
-        guiUpdater = new AnimationTimer() {
-            private long lastUpdate = 0;
-
-            @Override
-            public void handle(long now) {
-            	if (cpu.isHalted()) {
-            		this.stop();
-            	}
-            	
-                // Update alle 100 Millisekunden (~10 FPS)
-                if (now - lastUpdate >= 100_000_000) { // 100 Millisekunden in Nanosekunden
-                    Platform.runLater(() -> {
+	                Platform.runLater(() -> {
                         updateMemoryDumpTextArea();
                         updateInstructionLogTextArea();
                     });
-                    lastUpdate = now;
-                }
-            }
-        };
+	                
+	                // Wenn step nicht getriggert schleife ohne was zu tun wiederholen:
+	            	while (!stepButtonPressed.get()) {
+	            		Thread.sleep(100);
+	            	}
+	            	
+	            	
+	                // TODO ÄNDERN AUF ANDERE METHODE ZUR FREQUENZ SIMULATION
+	                Thread.sleep(30);
+	            }
+	            
+	            afterRun();
+
+	            return null;
+	        }
+	    };
 
 	    // Task in einem neuen Thread starten
 	    Thread systemThread = new Thread(systemTask);
 	    systemThread.setDaemon(true); // Beende den Thread automatisch beim Schließen der App
 	    systemThread.start();
-	    guiUpdater.start();
 	}
 
 	/**
@@ -388,5 +404,9 @@ public class ScreenViewController {
 	
 	private synchronized void incrementInstructionCounter() {
 	    currentInstruction += 1;
+	}
+	
+	public BooleanProperty isSystemRunningProperty() {
+		return this.systemRunning;
 	}
 }

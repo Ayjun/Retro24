@@ -61,7 +61,7 @@
                   <Font size="18.0" />
                </font>
             </Text>
-            <Button fx:id="cpuStepButton" layoutX="335.0" layoutY="148.0" mnemonicParsing="false" onMouseClicked="#handleClickCPUStepButton" prefHeight="50.0" prefWidth="149.0" text="          CPU Step" textAlignment="CENTER" visible="false" />
+            <Button fx:id="cpuStepButton" layoutX="335.0" layoutY="148.0" mnemonicParsing="false" prefHeight="50.0" prefWidth="149.0" text="          CPU Step" textAlignment="CENTER" visible="false" />
             <ImageView fx:id="cpuStepButtonImage" fitHeight="42.0" fitWidth="42.0" layoutX="342.0" layoutY="152.0" visible="false">
                <image>
                   <Image url="@304307.png" />

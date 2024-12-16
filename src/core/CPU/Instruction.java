@@ -50,13 +50,10 @@ public enum Instruction {
 		return new byte[0];
 	}),
 
-	// Ich gehe davon aus es ist gemeint R1 und R2 sollen der Inhalt fuer AR werden?
-	// Weiterhin gehe ich davon aus dass R1 das höherwertige Byte sein soll?
 	// RAR ($03, 1-Byte-OP): R1/R2 werden ins AR kopiert.
 	RAR("RAR", 0x03, (cpu) -> {
 
 		short newAR = twoByteToShort(cpu.getR2(), cpu.getR1());
-
 		cpu.setAR(newAR);
 
 		return new byte[0];
@@ -477,6 +474,10 @@ public enum Instruction {
 		this.function = function;
 	}
 
+	/**
+	 * Führt eine Instruktion aus und speichert die Argumente dieser im args Attribut. 
+	 * @param cpu die CPU auf der die Instruktion ausgeführt wird
+	 */
 	public void execute(CPU cpu) {
 		args = function.execute(cpu);
 	}
