@@ -1,0 +1,284 @@
+; MERKE !!!!
+; KOMBI:
+; MAR $FF $FF
+; LRW
+; RAR
+; LÄDT EINE AN $FF $FF abgespeicherte Adresse ins Adressregister!
+
+; HÄUFIGE FEHLER:
+; KEINE KOMMAS VOR ARGUMENTEN
+; 0x statt $ für hexwerte
+; DEZIMALWERTE ALS ARGUMENTE SIND FALSCH!
+; FF statt HLT <-
+
+; STEP4
+
+.base $0100
+
+.def uflag $000A
+
+.def yfirsta $E01F
+.def yfirstb $F01F
+
+setblack:
+                            MR0, $00
+                            MAR, darklightpos
+                            LRW ; Lädt Adresse in Register, nun als nächstes AR aus Register laden
+                            RAR
+                            SR0
+                            MAR, colorpos
+                            LRW
+                            RAR
+                            SR0
+                            ;Flag setzen:
+                            MAR, uflag
+                            MR0, $01
+                            SR0
+                            MR0, $00
+                            MAR, return
+                            SIC
+                            MAR, incrx
+                            JZ0
+
+setyellow:
+                            MR0, $01
+                            MAR, darklightpos
+                            LRW
+                            RAR
+                            SR0
+                            MAR, colorpos
+                            LRW
+                            RAR
+                            SR0
+                            MAR, uflag
+                            MR0, $01
+                            SR0
+                            MR0, $00
+                            MAR, return
+                            SIC
+                            MAR, incrx
+                            JZ0
+
+setblue:
+                            MR0, $00
+                            MAR, darklightpos
+                            LRW
+                            RAR
+                            SR0
+                            MR0, $01
+                            MAR, colorpos
+                            LRW
+                            RAR
+                            SR0
+                            MAR, uflag
+                            MR0, $01
+                            SR0
+                            MR0, $00
+                            MAR, return
+                            SIC
+                            MAR, incrx
+                            JZ0
+
+setwhite:
+                            MR0, $01
+                            MAR, darklightpos
+                            LRW                              ; Daten an darklightpos in R1 / R2 laden
+                            RAR
+                            SR0
+                            MR0, $00
+                            MAR, colorpos
+                            LRW                                 ; Daten an colorpos in R1 / R2 laden
+                            RAR
+                            SR0
+                            MAR, uflag
+                            MR0, $01
+                            SR0
+                            MR0, $00
+                            MAR, return
+                            SIC
+                            MAR, incrx
+                            JZ0
+
+startover:
+                            MR0, $04
+                            MAR, xcount
+                            LRW
+                            A01
+                            X01
+                            MAR, vert
+                            JE0, $40
+                            X01
+                            MAR, xcount
+                            SRW
+                            MAR, setblack
+                            MR0, $DD
+                            JMP
+
+vert:
+                            ; darklightpos soll hier nun auf yfirsta $E01F gesetzt werden
+                            MAR, yfirsta
+                            TAW
+                            MAR, darklightpos
+                            SRW
+                            ; colorpos soll hier nun auf yfirstb $F01F gesetzt werden
+                            MAR, yfirstb
+                            TAW
+                            MAR, colorpos
+                            MR0, $AB
+                            SRW
+                            ; xcount zuruecksetzen auf 0:
+                            MAR, xcount
+                            MR0, 0
+                            SR0
+
+
+setblackb:
+                            MR0, $00 ; MACHT GRADE ZU TESTZWECKEN WEISS
+                            MAR, darklightpos
+                            LRW ; Lädt Adresse in Register, nun als nächstes AR aus Register laden
+                            RAR
+                            SR0
+                            MAR, colorpos
+                            LRW
+                            RAR
+                            SR0
+                            ;Flag setzen:
+                            MAR, uflag
+                            MR0, $01
+                            SR0
+                            MR0, $00
+                            MAR, return
+                            SIC
+                            MAR, incry
+                            JZ0
+
+setyellowb:
+                            MR0, $01
+                            MAR, darklightpos
+                            LRW
+                            RAR
+                            SR0
+                            MAR, colorpos
+                            LRW
+                            RAR
+                            SR0
+                            MAR, uflag
+                            MR0, $01
+                            SR0
+                            MR0, $00
+                            MAR, return
+                            SIC
+                            MAR, incry
+                            JZ0
+
+setblueb:
+                            MR0, $00
+                            MAR, darklightpos
+                            LRW
+                            RAR
+                            SR0
+                            MR0, $01
+                            MAR, colorpos
+                            LRW
+                            RAR
+                            SR0
+                            MAR, uflag
+                            MR0, $01
+                            SR0
+                            MR0, $00
+                            MAR, return
+                            SIC
+                            MAR, incry
+                            JZ0
+
+setwhiteb:
+                            MR0, $01
+                            MAR, darklightpos
+                            LRW                              ; Daten an darklightpos in R1 / R2 laden
+                            RAR
+                            SR0
+                            MR0, $00
+                            MAR, colorpos
+                            LRW                                 ; Daten an colorpos in R1 / R2 laden
+                            RAR
+                            SR0
+                            MAR, uflag
+                            MR0, $01
+                            SR0
+                            MR0, $00
+                            MAR, return
+                            SIC
+                            MAR, incry
+                            JZ0
+
+startoverb:
+                            MR0, $04
+                            MAR, xcount
+                            LRW
+                            A01
+                            X01
+                            MAR, end
+                            JE0, $40
+                            X01
+                            MAR, xcount
+                            SRW
+                            MAR, setblackb
+                            MR0, $DD
+                            JMP
+
+end:
+                            HLT
+
+incrx:
+                            MAR, darklightpos
+                            LRW
+                            IRW
+                            SRW
+                            MAR, colorpos
+                            LRW
+                            IRW
+                            SRW
+
+                            MR0, $01
+                            MAR, return
+                            LRW
+                            RAR
+                            AAR          ;debugged! hier muss wieder MAR zuückgesetzt werden da sonst wegen rar die addresse im AR steht welche unter der return Adresse gespeichert ist! Und da bei return: SIC steht,
+                                        ;speicher SIC seine Daten dann mittem im Programm (an der return Adresse)
+                                        ; Lösung -> WIR MÜSSEN DIE RETURN ADDRESSE ERST UM EINS ERHÖHEN das machen wir einfach mit AAR, damit SIC dann nach dem Rücksprung nicht noch einmal ausgeführt wird!
+                            JMP
+
+
+incry:
+                            MR0, $40
+                            MAR, darklightpos ; hole adresse
+                            LRW  ; Laden des Wertes aus darklightpos
+                            A01  ; Addiere $40 auf darklightpos Wert
+                            SRW  ; Speichere den neuen darklightpos Wert an darklightpos Adresse
+
+                            MAR, colorpos
+                            LRW  ; Laden des Wertes aus darklightpos
+                            A01  ; Addiere $40 auf darklightpos Wert
+                            SRW  ; Speichere den neuen darklightpos Wert an darklightpos Adresse
+
+                            MR0, $01
+                            MAR, return
+                            LRW
+                            RAR
+                            AAR
+                            JMP
+
+
+; Zwischenspeicher für die Position im dark/light Memory Bereich
+darklightpos:
+                            DAT $C0, $E7 ;Startaddresse dark/light
+
+; Zwischenspeicher für die Position im color Memory Bereich
+colorpos:
+                            DAT $C0, $F7 ;Startaddresse color
+
+return:
+                            DAT $00, $00
+
+xcount:
+                            DAT $00, $00

@@ -28,7 +28,7 @@ public class ScreenViewController {
 	/**
 	 * Die CPU-Frequenz in Hz
 	 */
-	public static final int CPUFREQUENCY = 100;
+	public static final int CPUFREQUENCY = 1000;
 	
 	private final Retro24 retro24;
 	private final GraphicChip graphicChip;
