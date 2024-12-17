@@ -28,7 +28,7 @@ public class ScreenViewController {
 	/**
 	 * Die CPU-Frequenz in Hz
 	 */
-	public static final int CPUFREQUENCY = 1000;
+	public static final int CPUFREQUENCY = 100;
 	
 	private final Retro24 retro24;
 	private final GraphicChip graphicChip;
@@ -162,7 +162,6 @@ public class ScreenViewController {
 
 	        if (sleepTime > 0) {
 	            Thread.sleep(sleepTime / 1_000_000, (int) (sleepTime % 1_000_000)); // Schlafzeit in Millisekunden und Nanosekunden
-	            // Debugging Info:
 	            // System.out.println((System.nanoTime() - cycleStartTime) / 1000 + " mikrosekunden Zyklus");
 	        } 
 	    }
