@@ -134,8 +134,7 @@ public class ScreenViewController {
 		Platform.runLater(() -> {
 			if (logTransfer != null) {
 				logTransfer.stop();
-				memoryLog.drainTo(memoryLogObs);
-                instructionLog.drainTo(instructionLogObs);
+				drainLogs();
 			}
         });
 		
@@ -241,8 +240,7 @@ public class ScreenViewController {
 	                event -> {
 	                	// TODO Nur Update wenn es auch neuen Eintrag in Log gibt:
 	                    Platform.runLater(() -> {
-	                        memoryLog.drainTo(memoryLogObs);
-	                        instructionLog.drainTo(instructionLogObs);
+	                        drainLogs();
 	                    });
 	                }
 	            )
@@ -342,7 +340,11 @@ public class ScreenViewController {
 	 * Gibt die Logs in die View Logs
 	 */
 	public void drainLogs() {
-		memoryLog.drainTo(memoryLogObs);
-        instructionLog.drainTo(instructionLogObs);
+		if (dumpMemory) {
+			memoryLog.drainTo(memoryLogObs);
+		}
+		if (instructionInfoLog) {
+	        instructionLog.drainTo(instructionLogObs);
+		}
 	}
 }

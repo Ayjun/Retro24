@@ -143,22 +143,28 @@ public class ControlPanelController {
 		instructionInfoListView.setItems(sc.getInstructionLogObservable());
 		memoryDumpListView.setItems(sc.getMemoryLogObservable());
 		
-		// TEST TEST
-		instructionInfoListView.getItems().addListener((ListChangeListener<String>) change -> {
-		    while (change.next()) {
-		        if (change.wasAdded() || change.wasReplaced()) {
-		            Platform.runLater(() -> instructionInfoListView.scrollTo(instructionInfoListView.getItems().size()));
-		        }
-		    }
-		});
 		
-		memoryDumpListView.getItems().addListener((ListChangeListener<String>) change -> {
-		    while (change.next()) {
-		        if (change.wasAdded() || change.wasReplaced()) {
-		            Platform.runLater(() -> memoryDumpListView.scrollTo(memoryDumpListView.getItems().size()));
-		        }
-		    }
-		});
+		if (instructionInfoCheckBox.isSelected()) {
+			instructionInfoListView.getItems().addListener((ListChangeListener<String>) change -> {
+			    while (change.next()) {
+			        if (change.wasAdded() || change.wasReplaced()) {
+			            Platform.runLater(() -> instructionInfoListView.scrollTo(instructionInfoListView.getItems().size()));
+			        }
+			    }
+			});
+		}
+		
+		
+		if (memoryDumpCheckBox.isSelected()) {
+			memoryDumpListView.getItems().addListener((ListChangeListener<String>) change -> {
+			    while (change.next()) {
+			        if (change.wasAdded() || change.wasReplaced()) {
+			            Platform.runLater(() -> memoryDumpListView.scrollTo(memoryDumpListView.getItems().size()));
+			        }
+			    }
+			});
+		}
+		
 		
 		// TEST ENDE
 	}
@@ -422,8 +428,12 @@ public class ControlPanelController {
  	
  	public void tail() {
  		Platform.runLater(() -> {
- 	        memoryDumpListView.scrollTo(memoryDumpListView.getItems().size());
- 	        instructionInfoListView.scrollTo(memoryDumpListView.getItems().size());
+ 			if (isDumpMemorySelected()  && this.memoryDumpListView.getItems() != null) {
+ 				memoryDumpListView.scrollTo(memoryDumpListView.getItems().size());
+ 			}
+ 			if (instructionInfoCheckBox.isSelected() && this.instructionInfoListView.getItems() != null) {
+ 				instructionInfoListView.scrollTo(instructionInfoListView.getItems().size());
+ 			}
  		});
  	}
  	
@@ -432,8 +442,12 @@ public class ControlPanelController {
  	 * Resettet die Textareas
  	 */
  	public void resetTextAreas() {
- 		this.instructionInfoListView.getItems().clear();
- 		this.memoryDumpListView.getItems().clear();
+ 		if (isDumpMemorySelected() && this.memoryDumpListView.getItems() != null) {
+ 			this.memoryDumpListView.getItems().clear();
+ 		}
+ 		if (instructionInfoCheckBox.isSelected() && this.instructionInfoListView.getItems() != null) {
+ 	 		this.instructionInfoListView.getItems().clear();
+ 		}
  	}
  	
  	public boolean isInstructionInfoSelected() {
