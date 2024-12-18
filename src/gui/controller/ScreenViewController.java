@@ -3,18 +3,18 @@ package gui.controller;
 import static util.DebugUtil.*;
 import static util.StringUtil.*;
 
-import org.junit.internal.runners.statements.RunAfters;
 
 import core.Retro24;
 import core.CPU.CPU;
 import core.graphics.GraphicChip;
 import gui.view.ScreenView;
-import javafx.animation.AnimationTimer;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
 import javafx.scene.Node;
 import javafx.util.Duration;
@@ -28,7 +28,7 @@ public class ScreenViewController {
 	/**
 	 * Die CPU-Frequenz in Hz
 	 */
-	public static final int CPUFREQUENCY = 100;
+	public static final int CPUFREQUENCY = 1000;
 	
 	private final Retro24 retro24;
 	private final GraphicChip graphicChip;
@@ -45,13 +45,15 @@ public class ScreenViewController {
 	private final boolean instructionInfoLog;
 	private Log instructionLog;
 	
-	private final boolean cpuStepMode;
 	
 	private int currentInstruction = 0;
 	
-	private AnimationTimer guiUpdater;
-	
+	private Timeline logTransfer;
+
 	private BooleanProperty systemRunning;
+	
+	BooleanProperty stepButtonPressed = new SimpleBooleanProperty(true);
+	BooleanProperty cpuPaused = new SimpleBooleanProperty(false);
 	
 	public ScreenViewController(ControlPanelController controlPanelController) {
 		systemRunning = new SimpleBooleanProperty(true);
@@ -61,21 +63,44 @@ public class ScreenViewController {
 		retro24.initialize();
 		this.cpu = retro24.getCPU();
 		this.graphicChip = retro24.getGraphicChip();
-		this.cpuStepMode = controlPanelController.isCPUHaltenSelected();
 		this.instructionInfoLog = controlPanelController.isInstructionInfoSelected();
 		this.dumpMemory = controlPanelController.isDumpMemorySelected();
 		initializeLogs();
 		updateView();
 	}
 	
+	/**
+	 * Methode zum Erledigen von Dingen vor dem eigentlichen Systemstart (im ScreenViewController).
+	 */
+	private void beforeRunScreenViewController() {
+		// Title Screen zurücksetzen:
+        graphicChip.resetVidMem();
+        setBindings();
+        updateView();
+	}
+	
+	private void setBindings() {
+		try {
+	        cpuPaused.bind(controlPanelController.cpuPaused());
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	    }
+	}
+	
+	
+	
 	private void initializeLogs() {
 		if (dumpMemory) {
 			this.memoryLog = new Log();
+			this.memoryLogObs = FXCollections.observableArrayList();
 		}
 		if (instructionInfoLog) {
 			this.instructionLog = new Log();
+			this.instructionLogObs = FXCollections.observableArrayList();
 		}
 	}
+	
+
 	
 	/**
 	 * Setzt die Variablen für den Memory Dump 
@@ -98,35 +123,7 @@ public class ScreenViewController {
 		}
     }
 	
-	/**
-	 * Testmethode für die Kommunikation zwischen model und view,
-	 * lädt immer wechselnd Test- und Welcomescreen in den Grafikspeicher was dann im View angezeigt wird.
-	 */
-	int cycle = 0;
-	public void test() {
-		Timeline timeline = new Timeline(new KeyFrame(Duration.seconds(1), event -> {
-			graphicChip.setUpdateFlag(true);
-	        if (cycle % 2 == 0) {
-	        	graphicChip.loadRetro24WelcomeScreen();
-	        } else {
-	            graphicChip.loadRandomTestImage();
-	        }
-	        updateView();
-	        cycle += 1;
-	    }));
-	    timeline.setCycleCount(5); // Wiederholt sich unendlich
-	    timeline.play();
-	}
 	
-	
-	/**
-	 * Wird vor dem Systemstart ausgeführt
-	 */
-	private void beforeRun() {
-		// Title Screen zurücksetzen:
-        graphicChip.resetVidMem();
-        updateView();
-	}
 	
 	/**
 	 * Wird nach dem Systemstart ausgeführt
@@ -135,10 +132,11 @@ public class ScreenViewController {
 		systemRunning.set(false);
 		this.cpu.setHalt(true);
 		Platform.runLater(() -> {
-			if (guiUpdater != null) {
-				guiUpdater.stop();
+			if (logTransfer != null) {
+				logTransfer.stop();
+				memoryLog.drainTo(memoryLogObs);
+                instructionLog.drainTo(instructionLogObs);
 			}
-        	finalLogUpdate(); // Letztes Update der GUI nach Beendigung der Emulation
         });
 		
 	}
@@ -147,30 +145,55 @@ public class ScreenViewController {
 	 * Hauptschleife in der das System läuft
 	 * @throws InterruptedException 
 	 */
-	private void mainLoop() throws InterruptedException {
+	private void mainLoop()  {
+		
+		try {
+			stepCPU();
+		    while (!cpu.isHalted()) {
+		    	if (cpuPaused.get()) {
+		    		continue;
+		    	}
+		        stepCPU();
+		    }
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void stepCPU() throws InterruptedException {
+		if (cpu.isHalted()) {
+			return;
+		}
 	    final long targetCycleDurationNanos = 1_000_000_000 / CPUFREQUENCY ; // Zeit eines Taktes in Nanosekunden
-	    while (!cpu.isHalted()) {
-	        long cycleStartTime = System.nanoTime(); // Startzeit des Zyklus
 
-	        incrementInstructionCounter();
-	        retro24.runNextInstruction();
-	        updateView();
-	        updateLogs();
+		long cycleStartTime = System.nanoTime(); // Startzeit des Zyklus
 
-	        long elapsedTime = System.nanoTime() - cycleStartTime; // Verstrichene Zeit in Nanosekunden
-	        long sleepTime = targetCycleDurationNanos - elapsedTime; // Verbleibende Zeit berechnen
+        incrementInstructionCounter();
+        retro24.runNextInstruction();
+        updateView();
+        updateLogs();
 
-	        if (sleepTime > 0) {
-	            Thread.sleep(sleepTime / 1_000_000, (int) (sleepTime % 1_000_000)); // Schlafzeit in Millisekunden und Nanosekunden
-	            // System.out.println((System.nanoTime() - cycleStartTime) / 1000 + " mikrosekunden Zyklus");
-	        } 
-	    }
+        long elapsedTime = System.nanoTime() - cycleStartTime; // Verstrichene Zeit in Nanosekunden
+        long sleepTime = targetCycleDurationNanos - elapsedTime; // Verbleibende Zeit berechnen
+
+        controlPanelController.tail();
+        
+        if (sleepTime > 0) {
+            Thread.sleep(sleepTime / 1_000_000, (int) (sleepTime % 1_000_000)); // Schlafzeit in Millisekunden und Nanosekunden
+            // System.out.println((System.nanoTime() - cycleStartTime) / 1000 + " mikrosekunden Zyklus");
+        }
+        
 	}
 
 	/**
 	 * Startet das Retro24 System mit dem angegebenen Programm
 	 * @throws InterruptedException 
 	 */
+	// TODO umpostionieren:
+	ObservableList<String> memoryLogObs;
+	ObservableList<String> instructionLogObs;
 	public void runSystemNoDebug() {
 	    // Wenn die Stage (retro24 screen) geschlossen wird, beende auch die CPU.
 	    screenView.getStage().setOnCloseRequest((close) -> afterRun());
@@ -180,11 +203,11 @@ public class ScreenViewController {
 
 	    // Task für den Retro24-Hintergrundprozess erstellen
 	    Task<Void> systemTask = new Task<>() {
+	    	
 	        @Override
 	        protected Void call() throws InterruptedException  {
+	        	beforeRunScreenViewController();
 	        	
-	        	beforeRun();
-
 	            mainLoop();
 	            
 	            afterRun();
@@ -193,111 +216,40 @@ public class ScreenViewController {
 	        }
 	    };
 	    
-        // GUI-Updates periodisch mit AnimationTimer
-        guiUpdater = new AnimationTimer() {
-            private long lastUpdate = 0;
-
-            @Override
-            public void handle(long now) {
-            	if (cpu.isHalted()) {
-            		this.stop();
-            	}
-            	
-                // Update alle 100 Millisekunden (~10 FPS)
-                if (now - lastUpdate >= 100_000_000) { // 100 Millisekunden in Nanosekunden
-                    Platform.runLater(() -> {
-                        updateMemoryDumpTextArea();
-                        updateInstructionLogTextArea();
-                    });
-                    lastUpdate = now;
-                }
-            }
-        };
+	    
 
 	    // Task in einem neuen Thread starten
 	    Thread systemThread = new Thread(systemTask);
 	    systemThread.setDaemon(true); // Beende den Thread automatisch beim Schließen der App
 	    systemThread.start();
-	    guiUpdater.start();
+	    logTransfer.play();
 	}
 	
+	
+	public ObservableList<String> getMemoryLogObservable() {
+		return memoryLogObs;
+	}
+	
+	public ObservableList<String> getInstructionLogObservable() {
+		return instructionLogObs;
+	}
 	
 	public void runSystem() {
-		if (cpuStepMode) {
-			runSystemDebug();
-		}
-		else {
-			runSystemNoDebug();
-		}
-	}
-	
-	
-	/**
-	 * Startet das Retro24 System mit dem angegebenen Programm im Debug Modus (CPU halten)
-	 */
-	public void runSystemDebug() {
-		
-		BooleanProperty stepButtonPressed = new SimpleBooleanProperty();
-		stepButtonPressed.bindBidirectional(controlPanelController.getCPUStepActivity());
-		
-	    // Wenn die Stage (retro24 screen) geschlossen wird, beende auch die CPU.
-	    screenView.getStage().setOnCloseRequest((close) -> afterRun());
+		logTransfer = new Timeline(
+	            new KeyFrame(
+	                Duration.seconds(0.05),
+	                event -> {
+	                	// TODO Nur Update wenn es auch neuen Eintrag in Log gibt:
+	                    Platform.runLater(() -> {
+	                        memoryLog.drainTo(memoryLogObs);
+	                        instructionLog.drainTo(instructionLogObs);
+	                    });
+	                }
+	            )
+	        );
+		logTransfer.setCycleCount(Timeline.INDEFINITE);
 
-	    // Programm laden:
-	    retro24.loadProgramm(programPath);
-
-	    // Task für den Retro24-Hintergrundprozess erstellen
-	    Task<Void> systemTask = new Task<>() {
-	        @Override
-	        protected Void call() throws Exception {
-	      
-	        	beforeRun();
-	        	
-	            // Mainloop, solange CPU nicht anhält:
-	            while (!cpu.isHalted()) {
-
-	            	stepButtonPressed.set(false);
-	            	incrementInstructionCounter();
-	                retro24.runNextInstruction();
-	                updateView();
-	                updateLogs();
-	                
-	                Platform.runLater(() -> {
-                        updateMemoryDumpTextArea();
-                        updateInstructionLogTextArea();
-                    });
-	                
-	                // Wenn step nicht getriggert schleife ohne was zu tun wiederholen:
-	            	while (!stepButtonPressed.get()) {
-	            		Thread.sleep(100);
-	            	}
-	            	
-	                Thread.sleep(10);
-	            }
-	            
-	            afterRun();
-
-	            return null;
-	        }
-	    };
-
-	    // Task in einem neuen Thread starten
-	    Thread systemThread = new Thread(systemTask);
-	    systemThread.setDaemon(true); // Beende den Thread automatisch beim Schließen der App
-	    systemThread.start();
-	}
-
-	/**
-	 * Finales Update der Log-Anzeigen nach Halten der CPU.
-	 */
-	private void finalLogUpdate() {
-		if (dumpMemory) {
-			setMemoryDump();
-		}
-		if (instructionInfoLog) {
-			setInstructionLog();
-		}
-        updateView();
+		runSystemNoDebug();
 	}
 	
 	/**
@@ -321,7 +273,7 @@ public class ScreenViewController {
 		
 		StringBuilder currentMemoryLogEntry = new StringBuilder();
 		currentMemoryLogEntry.append("########### Instruction Number: " + currentInstruction + " ###########" + System.lineSeparator());
-		currentMemoryLogEntry.append(dumpMemory(getRetro24(), dumpMemoryFrom, dumpMemoryTo));
+		currentMemoryLogEntry.append(dumpMemory(getRetro24(), dumpMemoryFrom, dumpMemoryTo) + System.lineSeparator());
 		
 		memoryLog.offer(currentMemoryLogEntry.toString());
 	}
@@ -335,44 +287,10 @@ public class ScreenViewController {
 		StringBuilder currentInstructionLogEntry = new StringBuilder();
 		currentInstructionLogEntry.append("### Instruction Number: " + currentInstruction + System.lineSeparator());
 		currentInstructionLogEntry.append("##  " + cpu.getLastInstruction() + " " + byteArrayToString(cpu.getLastInstruction().getArgs()) + System.lineSeparator());
-		currentInstructionLogEntry.append(dumpLastCPUInstruction(getRetro24()));
+		currentInstructionLogEntry.append(dumpLastCPUInstruction(getRetro24()) + System.lineSeparator());
 		instructionLog.offer(currentInstructionLogEntry.toString());
 	}
-
-	/**
-	 * Live Updaten der Textarea in der der Memorydump angezeigt wird:
-	 */
-	public void updateMemoryDumpTextArea() {
-	    if (!dumpMemory || memoryLog.peekLast() == null) return;
-	    
-	    controlPanelController.updateMemoryDumpTextArea(System.lineSeparator() + memoryLog.peekLast());
-	}
 	
-	/**
-	 * Live Updaten der Textarea in der CPU Instruktionen angezeigt werden:
-	 */
-	public void updateInstructionLogTextArea() {
-		if (!instructionInfoLog || instructionLog.peekLast() == null) return;
-		
-	    controlPanelController.updateInstructionInfoTextArea(instructionLog.peekLast() + System.lineSeparator());
-	}
-	
-	/**
-	 * Setzen der memory dump Anzeige mit dem gespeicherten Log
-	 * @param log
-	 */
-	public void setMemoryDump() {
-		controlPanelController.setMemoryDumpTextArea(this.memoryLog.toString());
-	}
-	
-	/**
-	 * Setzen der Instruction Log Anzeige mit dem gespeicherten Log
-	 * @param log
-	 */
-	public void setInstructionLog() {
-		controlPanelController.setInstructionInfoTextArea(this.instructionLog.toString());
-	}
-
 	/**
 	 * Öffnet das Fenster für die Anzeige des Bildschirms in der View
 	 */
@@ -418,5 +336,13 @@ public class ScreenViewController {
 	
 	public BooleanProperty isSystemRunningProperty() {
 		return this.systemRunning;
+	}
+	
+	/**
+	 * Gibt die Logs in die View Logs
+	 */
+	public void drainLogs() {
+		memoryLog.drainTo(memoryLogObs);
+        instructionLog.drainTo(instructionLogObs);
 	}
 }

@@ -10,25 +10,36 @@ import gui.view.ControlPanelView;
 import javafx.animation.Animation.Status;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
+import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
+import javafx.collections.ListChangeListener;
 import javafx.fxml.FXML;
+import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
+import javafx.scene.control.ListCell;
+import javafx.scene.control.ListView;
+import javafx.scene.control.SelectionMode;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import javafx.stage.FileChooser;
 import javafx.util.Duration;
 
+/**
+ * @author Eric Schneider
+ */
 public class ControlPanelController {
 
 	// Der maximale Speicherbereich der beim Memorydump ausgegeben werden kann
-	private static int MAXMEMDUMP = 0xFF;
+	private static int MAXMEMDUMP = 0x1FF;
 	
+	// FXML Attribute (SceneBuilder):
 	@FXML
 	private Button startButton;
 	@FXML
@@ -46,13 +57,9 @@ public class ControlPanelController {
 	@FXML
 	private ImageView cpuStepButtonImage;
 	@FXML
-	private TextFlow instructionInfoFlow;
+	private ListView<String> instructionInfoListView;
 	@FXML
-	private TextArea instructionInfoText;
-	@FXML
-	private TextFlow memoryDumpFlow;
-	@FXML
-	private TextArea memoryDumpText;
+	private ListView<String> memoryDumpListView;
 	@FXML
 	private TextField vonMemoryDumpInput;
 	@FXML
@@ -64,59 +71,155 @@ public class ControlPanelController {
 	@FXML
 	private Text einrastenText;
 	
+	// Referenz auf View:
 	private ControlPanelView controlPanelView;
+	// Referenz auf ScreenViewController:
 	private ScreenViewController sc;
 	
-	private BooleanProperty cpuDoStepTriggered = new SimpleBooleanProperty();
+	// Enthält Info darüber, ob CPU laufen soll:
+	private BooleanProperty cpuPaused = new SimpleBooleanProperty(false);
 	
-	public void beforeStart() {
-		bindProperties();
+	/**
+	 * Methode zum Erledigen von Dingen vor dem eigentlichen Systemstart (im ControlPanelController).
+	 */
+	public void beforeRunControlPanelController() {
 		initHandlers();
+		bindProperties();
+		initStyle();	
 	}
 	
+	/**
+	 * Setzen von Style Einstellungen
+	 */
+	public void initStyle() {
+		// LISTVIEWS (memoryDump und instructionInfo):
+		
+		// Setzen der CSS-Eigenschaften für den Text (monospace, 13px) der ListViews
+		instructionInfoListView.setStyle("-fx-font-family: 'monospace'; -fx-font-size: 13px;");
+		memoryDumpListView.setStyle("-fx-font-family: 'monospace'; -fx-font-size: 13px;");
+		
+		// Alle Tabellenzeilen sollen weißen Hintergrund haben:
+		instructionInfoListView.setCellFactory(lv -> new ListCell<>() {
+		    @Override
+		    protected void updateItem(String item, boolean empty) {
+		        super.updateItem(item, empty);
+
+		        if (empty || item == null) {
+		            setText(null);
+		            setStyle("-fx-background-color: white;"); // Hintergrundfarbe für leere Zellen
+		        } else {
+		            setText(item);
+		            setStyle("-fx-background-color: white;"); // Hintergrundfarbe und Schrift
+		        }
+		    }
+		});
+
+		// Alle Tabellenzeilen sollen weißen Hintergrund haben:
+		memoryDumpListView.setCellFactory(lv -> new ListCell<>() {
+		    @Override
+		    protected void updateItem(String item, boolean empty) {
+		        super.updateItem(item, empty);
+
+		        if (empty || item == null) {
+		            setText(null);
+		            setStyle("-fx-background-color: white;"); // Hintergrundfarbe für leere Zellen
+		        } else {
+		            setText(item);
+		            setStyle("-fx-background-color: white;"); // Hintergrundfarbe und Schrift
+		        }
+		    }
+		});
+	}
+	
+	/**
+	 * Binden von Properties
+	 */
 	public void bindProperties() {
 		haltCPUCheckBox.disableProperty().bind(sc.isSystemRunningProperty());
 		instructionInfoCheckBox.disableProperty().bind(sc.isSystemRunningProperty());
 		memoryDumpCheckBox.disableProperty().bind(sc.isSystemRunningProperty());
 		vonMemoryDumpInput.disableProperty().bind(sc.isSystemRunningProperty());
 		bisMemoryDumpInput.disableProperty().bind(sc.isSystemRunningProperty());
+		instructionInfoListView.setItems(sc.getInstructionLogObservable());
+		memoryDumpListView.setItems(sc.getMemoryLogObservable());
+		
+		// TEST TEST
+		instructionInfoListView.getItems().addListener((ListChangeListener<String>) change -> {
+		    while (change.next()) {
+		        if (change.wasAdded() || change.wasReplaced()) {
+		            Platform.runLater(() -> instructionInfoListView.scrollTo(instructionInfoListView.getItems().size()));
+		        }
+		    }
+		});
+		
+		memoryDumpListView.getItems().addListener((ListChangeListener<String>) change -> {
+		    while (change.next()) {
+		        if (change.wasAdded() || change.wasReplaced()) {
+		            Platform.runLater(() -> memoryDumpListView.scrollTo(memoryDumpListView.getItems().size()));
+		        }
+		    }
+		});
+		
+		// TEST ENDE
 	}
 	
+	
 	public void initHandlers() {
-        
-		// Timeline erstellen
-        Timeline timeline = new Timeline();
-        timeline.setCycleCount(Timeline.INDEFINITE); // Wiederholen, solange aktiv
-        
-        // KeyFrame hinzufügen
-        KeyFrame keyFrame = new KeyFrame(Duration.millis(30), e -> {
-        	cpuDoStepTriggered.set(true);
-        });
-        timeline.getKeyFrames().add(keyFrame);
-
-        // Starten der Timeline beim Drücken der Maustaste
-        cpuStepButton.setOnMousePressed((event) -> {
-        	if (event.getButton() == MouseButton.PRIMARY) {
-        		timeline.play();
-        	}
-        });
-
-        // Stoppen der Timeline beim Loslassen der Maustaste
-        cpuStepButton.setOnMouseReleased((event) -> {
-        	if (event.getButton() == MouseButton.PRIMARY) {
-        		timeline.stop();
-        	}
-        });
-        
-        // Einrasten der Timeline bei Rechtsklick
+    
+        // CPU Step Button Handler:
         cpuStepButton.setOnMouseClicked((event) -> {
-        	if (event.getButton() == MouseButton.SECONDARY && timeline.getStatus() == Status.STOPPED) {
-        		timeline.play();
+        	// Wenn die CPU aktuell pausiert ist und Rechtsklick:
+        	if (event.getButton() == MouseButton.SECONDARY && cpuPaused.get()) {
+        		cpuPaused.set(false);
         	}
-        	else if (event.getButton() == MouseButton.SECONDARY && timeline.getStatus() == Status.RUNNING) {
-        		timeline.stop();
+        	// Wenn die CPU aktuell nicht pausiert ist und Rechtsklick:
+        	else if (event.getButton() == MouseButton.SECONDARY && !cpuPaused.get()) {
+        		cpuPaused.set(true);
+        	}
+        	// Wenn die CPU pausiert ist und Linksklick:
+        	else if (event.getButton() == MouseButton.PRIMARY && cpuPaused.get()) {
+        		try {
+					sc.stepCPU();
+					sc.drainLogs();
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+        	}
+        	// Wenn die CPU nicht pausiert ist und Linksklick:
+        	else if (event.getButton() == MouseButton.PRIMARY && !cpuPaused.get()) {
+        		cpuPaused.set(true);
         	}
         });
+        
+        // ListViews sollen nicht auf Clicks reagieren:
+        memoryDumpListView.addEventFilter(MouseEvent.MOUSE_PRESSED, event -> {
+            if (!isScrollBar(event.getTarget())) {
+                event.consume(); // Alle anderen Klicks blockieren
+            }
+        });
+        instructionInfoListView.addEventFilter(MouseEvent.MOUSE_PRESSED, event -> {
+            if (!isScrollBar(event.getTarget())) {
+                event.consume(); // Alle anderen Klicks blockieren
+            }
+        });
+	}
+	
+	// Hilfsmethode zur Prüfung, ob Ziel oder ein Elternteil eine ScrollBar ist
+	private boolean isScrollBar(Object target) {
+	    if (target instanceof javafx.scene.control.ScrollBar) {
+	        return true;
+	    }
+	    if (target instanceof Node) {
+	        Node node = (Node) target;
+	        while (node != null) {
+	            if (node instanceof javafx.scene.control.ScrollBar) {
+	                return true;
+	            }
+	            node = node.getParent();
+	        }
+	    }
+	    return false;
 	}
 
 	public void setControlPanelView(ControlPanelView controlPanelView) {
@@ -132,22 +235,22 @@ public class ControlPanelController {
 			cpuStepButton.setVisible(true);
 			cpuStepButtonImage.setVisible(true);
 			einrastenText.setVisible(true);
+			cpuPaused().set(true);
 			return;
 		}
 		cpuStepButton.setVisible(false);
 		cpuStepButtonImage.setVisible(false);
 		einrastenText.setVisible(false);
+		cpuPaused().set(false);
 	}
 	
 	@FXML
 	public void handleCheckInstructionInfoCheckBox() {
 		if (instructionInfoCheckBox.isSelected()) {
-			instructionInfoFlow.setVisible(true);
-			instructionInfoText.setVisible(true);
+			instructionInfoListView.setVisible(true);
 			return;
 		}
-		instructionInfoFlow.setVisible(false);
-		instructionInfoText.setVisible(false);
+		instructionInfoListView.setVisible(false);
 	}
 	
 	@FXML
@@ -157,8 +260,7 @@ public class ControlPanelController {
 			vonMemoryDumpText.setVisible(true);
 			bisMemoryDumpInput.setVisible(true);
 			bisMemoryDumpText.setVisible(true);
-			memoryDumpFlow.setVisible(true);
-			memoryDumpText.setVisible(true);
+			memoryDumpListView.setVisible(true);
 			vonMemoryDumpInput.setText("0x0100");
 			bisMemoryDumpInput.setText("0x01FF");
 			return;
@@ -167,8 +269,7 @@ public class ControlPanelController {
 		vonMemoryDumpText.setVisible(false);
 		bisMemoryDumpInput.setVisible(false);
 		bisMemoryDumpText.setVisible(false);
-		memoryDumpFlow.setVisible(false);
-		memoryDumpText.setVisible(false);
+		memoryDumpListView.setVisible(false);
 	}
 	
 	/**
@@ -212,7 +313,7 @@ public class ControlPanelController {
 			}
 			
 			if (getMemoryAddressTo() - getMemoryAddressFrom() > MAXMEMDUMP) {
-				controlPanelView.showError("Ungültiger Adressbereich!", "Der maximal erlaubte Adressbereich ist 0xFF lang.");
+				controlPanelView.showError("Ungültiger Adressbereich!", "Der maximal erlaubte Adressbereich ist überschritten!");
 				return;
 			}
 			
@@ -229,7 +330,7 @@ public class ControlPanelController {
 			sc.setDumpMemory(getMemoryAddressFrom(), getMemoryAddressTo());
 		}
 		
-		beforeStart();
+		beforeRunControlPanelController();
 		// Bildschirm des Retro24 anzeigen:
 		sc.showScreen();
 		
@@ -252,58 +353,9 @@ public class ControlPanelController {
 		return null;
     }
  	
- 	/**
- 	 * Hängt der MemoryDump TextArea den übergebenen String an.
- 	 * @param memoryDump
- 	 */
- 	public void updateMemoryDumpTextArea(String memoryDump) {
- 		if (!memoryDumpCheckBox.isSelected()) {
- 			return;
- 		}
- 	
- 		memoryDumpText.appendText(memoryDump);
- 	}
- 	
- 	/**
- 	 * Setzt die MemoryDump TextArea auf den übergebenen String.
- 	 * @param memoryDump
- 	 */
- 	public void setMemoryDumpTextArea(String memoryDump) {
- 		if (!memoryDumpCheckBox.isSelected()) {
- 			return;
- 		}
- 		memoryDumpText.setText(memoryDump);
- 	}
- 	
- 	
- 	/**
- 	 * Hängt der Instruction Info TextArea den übergebenen String an.
- 	 * @param memoryDump
- 	 */
- 	public void updateInstructionInfoTextArea(String instructionInfo) {
- 		if (!instructionInfoCheckBox.isSelected()) {
- 			return;
- 		}
- 		instructionInfoText.appendText(instructionInfo);
- 	}
- 	
- 	/**
- 	 * Setzt die Instruction Info TextArea auf den übergebenen String.
- 	 * @param memoryDump
- 	 */
- 	public void setInstructionInfoTextArea(String instructionInfo) {
- 		if (!memoryDumpCheckBox.isSelected()) {
- 			return;
- 		}
- 		instructionInfoText.setText(instructionInfo);
- 	}
- 	
- 	
- 	
  	public void setScreenViewController(ScreenViewController screenViewController) {
  		this.sc = screenViewController;
  	}
- 	
 
  	
  	/**
@@ -368,17 +420,20 @@ public class ControlPanelController {
  	    return null;
  	}
  	
+ 	public void tail() {
+ 		Platform.runLater(() -> {
+ 	        memoryDumpListView.scrollTo(memoryDumpListView.getItems().size());
+ 	        instructionInfoListView.scrollTo(memoryDumpListView.getItems().size());
+ 		});
+ 	}
+ 	
  	
  	/**
  	 * Resettet die Textareas
  	 */
  	public void resetTextAreas() {
- 		this.instructionInfoText.clear();
- 		this.memoryDumpText.clear();
- 	}
- 	
- 	public void appendToMemoryDumpText(String dump) {
- 		this.memoryDumpText.appendText(dump);
+ 		this.instructionInfoListView.getItems().clear();
+ 		this.memoryDumpListView.getItems().clear();
  	}
  	
  	public boolean isInstructionInfoSelected() {
@@ -393,8 +448,7 @@ public class ControlPanelController {
  		return this.haltCPUCheckBox.isSelected();
  	}
  	
- 	public BooleanProperty getCPUStepActivity() {
- 		return this.cpuDoStepTriggered;
+ 	public BooleanProperty cpuPaused() {
+ 		return this.cpuPaused;
  	}
- 	
 }
