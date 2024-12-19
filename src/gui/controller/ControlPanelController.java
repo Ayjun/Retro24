@@ -110,6 +110,7 @@ public class ControlPanelController {
 		eventHandler = new ControlPanelEventHandler(this);
 		initDefaultValues();
 		bindInternalProperties();
+		eventHandler.initializeHandlers();
 	}
 	
 	/**
@@ -119,7 +120,10 @@ public class ControlPanelController {
 	private void runBeforeScreenViewStart() {
 		// CPU auf Pause setzen falls Haken bei CPU halten:
 		cpuPausedBP().set(haltCPUCheckBoxBP().get());
-		eventHandler.setCpuStepHandler(() -> screenViewController.stepCPU());
+		eventHandler.setCpuStepHandler(() -> {
+			screenViewController.stepCPU();
+			screenViewController.drainLogs();
+		});
 		bindExternalProperties();
 		setUpExternalListeners();
 	}

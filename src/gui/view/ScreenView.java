@@ -46,6 +46,8 @@ public class ScreenView {
         retro24Stage.setResizable(false);
         retro24Stage.show();
         
+        retro24Stage.setOnCloseRequest((close) -> sc.afterRun());
+        
         // Pause für 3 Sekunden, bevor das System gestartet wird
         // um den Willkommensbildschirm zu zeigen
         PauseTransition pause = new PauseTransition(Duration.seconds(3));

@@ -74,7 +74,7 @@ public class ScreenViewController {
         updateView();
 	}
 	
-	private void bindExternalProperties() {
+	public void bindExternalProperties() {
 		try {
 			cpuPausedBP().bindBidirectional(controlPanelController.cpuPausedBP());
 	    } catch (Exception e) {
@@ -96,7 +96,7 @@ public class ScreenViewController {
 	/**
 	 * Wird nach dem Systemstart ausgeführt
 	 */
-	private void afterRun() {
+	public void afterRun() {
 		systemRunningBP.set(false);
 		retro24.getCPU().setHalt(true);
 		Platform.runLater(() -> {
@@ -169,7 +169,8 @@ public class ScreenViewController {
 		logTransfer.setCycleCount(Timeline.INDEFINITE);
 		
 		// Wenn die Stage (retro24 screen) geschlossen wird, beende auch die CPU.
-	    screenView.getStage().setOnCloseRequest((close) -> afterRun());
+	    // screenView.getStage().setOnCloseRequest((close) -> afterRun());
+		// ist jetzt in der View!
 
 	    // Programm laden:
 	    retro24.loadProgramm(programPath);
