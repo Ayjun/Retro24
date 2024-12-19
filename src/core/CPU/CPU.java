@@ -1,10 +1,10 @@
 package core.CPU;
 
+import static common.util.NumberUtil.*;
 import static core.CPU.Instruction.HLT;
 import static core.CPU.Instruction.getInstruction;
-import static util.NumberUtil.*;
-import static core.Retro24.TICKADDRESS;
-import static core.Retro24.TOCKADDRESS;
+import static core.Retro24.TICK_ADDRESS;
+import static core.Retro24.TOCK_ADDRESS;
 
 import core.Retro24;
 
@@ -175,8 +175,8 @@ public class CPU {
     	if (!checkUnderflow(subU(tock, 1))) {
     		tock = trimToByte(subU(tock, 1));
     	}
-    	writeMemory(TICKADDRESS, tick);
-    	writeMemory(TOCKADDRESS, tock);
+    	writeMemory(TICK_ADDRESS, tick);
+    	writeMemory(TOCK_ADDRESS, tock);
     }
     
     public boolean hasJumped() {

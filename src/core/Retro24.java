@@ -15,11 +15,12 @@ import core.graphics.GraphicChip;
  */
 public class Retro24 {
 	
-	public static final int MEMORYSTART = 0x0000;
-	public static final int MEMORYEND = 0xFFFF;
-	
-	public static final int TICKADDRESS = 0x0010;
-	public static final int TOCKADDRESS = 0x0011;
+	public static final int MEMORY_START = 0x0000;
+	public static final int MEMORY_END = 0xFFFF;
+	public static final int PROGRAMM_MEMORYSTART = 0x0100;
+	public static final int TICK_ADDRESS = 0x0010;
+	public static final int TOCK_ADDRESS = 0x0011;
+	public static final String SUPPORTED_FILE_EXTENSION = ".bin";
 
 	private byte[] memory;
 	private CPU cpu;

@@ -1,8 +1,8 @@
-package util;
+package gui.util;
 
 import javafx.scene.Node;
 
-public class JavaFXUtil {
+public class ScrollBarChecker {
 	
 	/**
 	 * Prüft ob ein Objekt eine javaFX Scrollbar ist.

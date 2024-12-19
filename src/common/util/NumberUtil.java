@@ -1,4 +1,4 @@
-package util;
+package common.util;
 
 /**
  * Utility-Klasse für unsigned Operationen mit byte und short.

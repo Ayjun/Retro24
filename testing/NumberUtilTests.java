@@ -1,7 +1,7 @@
 import org.junit.Test;
 
+import static common.util.NumberUtil.*;
 import static org.junit.Assert.assertEquals;
-import static util.NumberUtil.*;
 
 public class NumberUtilTests {
 	@Test

@@ -1,4 +1,4 @@
-package util;
+package common.util;
 
 import java.math.BigInteger;
 
@@ -40,14 +40,5 @@ public class StringUtil {
 
 	    // Rückgabe als int
 	    return value.intValue();
-	}
-	
-	/**
-	 * Wandelt ein int zu einem hexadezimal String der Form 0x1234
-	 * @param i int
-	 * @return die hexadezimale String Repäsentation von i
-	 */
-	public static String intToHexString(int i) {
-		return String.format("0x%02X", i);
 	}
 }

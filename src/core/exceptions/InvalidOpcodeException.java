@@ -1,4 +1,4 @@
-package exceptions;
+package core.exceptions;
 
 public class InvalidOpcodeException extends IllegalArgumentException {
 	private static final long serialVersionUID = -6296576204319542922L;

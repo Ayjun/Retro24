@@ -1,3 +1,4 @@
+import static common.util.NumberUtil.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.Arrays;
@@ -5,7 +6,6 @@ import java.util.Arrays;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import static util.NumberUtil.*;
 
 import core.Retro24;
 import core.CPU.CPU;

@@ -1,4 +1,4 @@
-package util;
+package common.util.debug.log;
 
 import java.util.Collection;
 import java.util.concurrent.BlockingDeque;

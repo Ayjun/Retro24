@@ -1,0 +1,12 @@
+.memory-dump-list-view {
+    -fx-font-family: 'monospace' !important;
+    -fx-font-size: 13px !important;
+}
+
+.memory-dump-list-view .list-cell {
+    -fx-background-color: white !important;
+}
+
+.memory-dump-list-view .list-cell:empty {
+    -fx-background-color: white !important;
+}

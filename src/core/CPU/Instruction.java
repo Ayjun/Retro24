@@ -1,9 +1,10 @@
 package core.CPU;
 
-import static util.NumberUtil.*;
+import static common.util.NumberUtil.*;
+
 import java.util.HashMap;
 
-import exceptions.InvalidOpcodeException;
+import core.exceptions.InvalidOpcodeException;
 
 /**
  * Enum aller CPU Instruktionen, die Instruktionen enthalten jeweils
