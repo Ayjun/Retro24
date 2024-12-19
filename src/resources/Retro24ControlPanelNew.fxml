@@ -51,9 +51,9 @@
             <Button fx:id="startButton" layoutX="8.0" layoutY="147.0" mnemonicParsing="false" onMouseClicked="#handleStartButtonClick" prefHeight="50.0" prefWidth="149.0" text="       START" textAlignment="CENTER" />
             <TextField fx:id="pathInputText" layoutX="8.0" layoutY="72.0" onMouseClicked="#handlePathInputTextClick" prefHeight="27.0" prefWidth="747.0" text="Programmpfad" />
             <Button fx:id="lookForFileButton" layoutX="793.0" layoutY="73.0" mnemonicParsing="false" onMouseClicked="#handleLookForFileButtonClick" text="..." />
-            <CheckBox fx:id="memoryDumpCheckBox" layoutX="707.0" layoutY="113.0" mnemonicParsing="false" onMouseReleased="#handleCheckMemoryDumpCheckBox" text="Memory Dump" />
-            <CheckBox fx:id="instructionInfoCheckBox" layoutX="9.0" layoutY="113.0" mnemonicParsing="false" onMouseReleased="#handleCheckInstructionInfoCheckBox" text="CPU Instruktionen Info" />
-            <CheckBox fx:id="haltCPUCheckBox" layoutX="364.0" layoutY="113.0" mnemonicParsing="false" onMouseReleased="#handleCheckHaltCPUCheckBox" text="CPU halten" />
+            <CheckBox fx:id="memoryDumpCheckBox" layoutX="707.0" layoutY="113.0" mnemonicParsing="false" text="Memory Dump" />
+            <CheckBox fx:id="instructionInfoCheckBox" layoutX="9.0" layoutY="113.0" mnemonicParsing="false" text="CPU Instruktionen Info" />
+            <CheckBox fx:id="haltCPUCheckBox" layoutX="364.0" layoutY="113.0" mnemonicParsing="false" text="CPU halten" />
             <Polygon fill="#20c7366f" layoutX="59.0" layoutY="182.0" points="-50.0, 40.0, 50.0, 40.0, 0.0, -60.0" rotate="90.0" scaleX="0.2" scaleY="0.2" scaleZ="0.5" stroke="BLACK" strokeType="INSIDE" />
             <Text layoutX="10.0" layoutY="58.0" strokeType="OUTSIDE" strokeWidth="0.0" text="Programm starten:">
                <font>

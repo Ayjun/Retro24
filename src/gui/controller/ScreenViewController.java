@@ -33,39 +33,34 @@ public class ScreenViewController {
 	private final Retro24 retro24;
 	private final GraphicChip graphicChip;
 	private final CPU cpu;
-	private ScreenView screenView;
-	private String programPath;
-	private ControlPanelController controlPanelController;
+	private final ControlPanelController controlPanelController;
+	private final ScreenView screenView;
+	private final String programPath;
 	
-	private final boolean dumpMemory;
-	private int dumpMemoryFrom;
-	private int dumpMemoryTo;
-	private Log memoryLog;
-	
-	private final boolean instructionInfoLog;
-	private Log instructionLog;
-	
+	private Log memoryLog = new Log();
+	private Log instructionLog = new Log();
 	
 	private int currentInstruction = 0;
 	
 	private Timeline logTransfer;
 
-	private BooleanProperty systemRunning;
+	// Boolean Properties:
+	private BooleanProperty systemRunningBP = new SimpleBooleanProperty(true);
+	private BooleanProperty cpuPausedBP = new SimpleBooleanProperty(false);
 	
-	BooleanProperty stepButtonPressed = new SimpleBooleanProperty(true);
-	BooleanProperty cpuPaused = new SimpleBooleanProperty(false);
-	
-	public ScreenViewController(ControlPanelController controlPanelController) {
-		systemRunning = new SimpleBooleanProperty(true);
+	/**
+	 * Konstruktor des ScreenViewController
+	 * @param controlPanelController der aufrufende controlPanelController
+	 * @param programPath der Pfad des auszuführenden Programmes
+	 */
+	public ScreenViewController(ControlPanelController controlPanelController, String programPath) {
 		this.controlPanelController = controlPanelController;
 		this.screenView = new ScreenView(GraphicChip.PIXELWIDTH, GraphicChip.PIXELHEIGHT, 0x0000, 0x1000);
 		this.retro24 = new Retro24();
 		retro24.initialize();
 		this.cpu = retro24.getCPU();
 		this.graphicChip = retro24.getGraphicChip();
-		this.instructionInfoLog = controlPanelController.isInstructionInfoSelected();
-		this.dumpMemory = controlPanelController.isDumpMemorySelected();
-		initializeLogs();
+		this.programPath = programPath;
 		updateView();
 	}
 	
@@ -75,45 +70,18 @@ public class ScreenViewController {
 	private void beforeRunScreenViewController() {
 		// Title Screen zurücksetzen:
         graphicChip.resetVidMem();
-        setBindings();
+        bindExternalProperties();
         updateView();
 	}
 	
-	private void setBindings() {
+	private void bindExternalProperties() {
 		try {
-	        cpuPaused.bind(controlPanelController.cpuPaused());
+			cpuPausedBP().bindBidirectional(controlPanelController.cpuPausedBP());
 	    } catch (Exception e) {
 	        e.printStackTrace();
 	    }
 	}
 	
-	
-	
-	private void initializeLogs() {
-		if (dumpMemory) {
-			this.memoryLog = new Log();
-			this.memoryLogObs = FXCollections.observableArrayList();
-		}
-		if (instructionInfoLog) {
-			this.instructionLog = new Log();
-			this.instructionLogObs = FXCollections.observableArrayList();
-		}
-	}
-	
-
-	
-	/**
-	 * Setzt die Variablen für den Memory Dump 
-	 * @param dumpFrom
-	 * @param dumpTo
-	 */
-	public void setDumpMemory(int dumpFrom, int dumpTo) {
-		if (!dumpMemory) {
-			return;
-		}
-		this.dumpMemoryFrom = dumpFrom;
-		this.dumpMemoryTo = dumpTo;
-	}
     
 	public void updateView() {
 		// Videoupdate Flag prüfen
@@ -129,7 +97,7 @@ public class ScreenViewController {
 	 * Wird nach dem Systemstart ausgeführt
 	 */
 	private void afterRun() {
-		systemRunning.set(false);
+		systemRunningBP.set(false);
 		this.cpu.setHalt(true);
 		Platform.runLater(() -> {
 			if (logTransfer != null) {
@@ -149,7 +117,7 @@ public class ScreenViewController {
 		try {
 			stepCPU();
 		    while (!cpu.isHalted()) {
-		    	if (cpuPaused.get()) {
+		    	if (cpuPausedBP.get()) {
 		    		continue;
 		    	}
 		        stepCPU();
@@ -161,7 +129,7 @@ public class ScreenViewController {
 		
 	}
 	
-	public void stepCPU() throws InterruptedException {
+	public void stepCPU() {
 		if (cpu.isHalted()) {
 			return;
 		}
@@ -176,12 +144,14 @@ public class ScreenViewController {
 
         long elapsedTime = System.nanoTime() - cycleStartTime; // Verstrichene Zeit in Nanosekunden
         long sleepTime = targetCycleDurationNanos - elapsedTime; // Verbleibende Zeit berechnen
-
-        controlPanelController.tail();
         
         if (sleepTime > 0) {
-            Thread.sleep(sleepTime / 1_000_000, (int) (sleepTime % 1_000_000)); // Schlafzeit in Millisekunden und Nanosekunden
-            // System.out.println((System.nanoTime() - cycleStartTime) / 1000 + " mikrosekunden Zyklus");
+            try {
+				Thread.sleep(sleepTime / 1_000_000, (int) (sleepTime % 1_000_000));
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
         }
         
 	}
@@ -191,8 +161,8 @@ public class ScreenViewController {
 	 * @throws InterruptedException 
 	 */
 	// TODO umpostionieren:
-	ObservableList<String> memoryLogObs;
-	ObservableList<String> instructionLogObs;
+	ObservableList<String> memoryLogObs = FXCollections.observableArrayList();
+	ObservableList<String> instructionLogObs = FXCollections.observableArrayList();
 	public void runSystemNoDebug() {
 	    // Wenn die Stage (retro24 screen) geschlossen wird, beende auch die CPU.
 	    screenView.getStage().setOnCloseRequest((close) -> afterRun());
@@ -224,15 +194,6 @@ public class ScreenViewController {
 	    logTransfer.play();
 	}
 	
-	
-	public ObservableList<String> getMemoryLogObservable() {
-		return memoryLogObs;
-	}
-	
-	public ObservableList<String> getInstructionLogObservable() {
-		return instructionLogObs;
-	}
-	
 	public void runSystem() {
 		logTransfer = new Timeline(
 	            new KeyFrame(
@@ -254,24 +215,20 @@ public class ScreenViewController {
 	 * Updated alle Logs
 	 */
 	private void updateLogs() {
-		if (dumpMemory) {
-	        updateMemoryLog();
-	    }
-
-	    if (instructionInfoLog) {
-	        updateInstructionLog();
-	    }
+	    updateMemoryLog();
+	    updateInstructionLog();
 	}
 	
 	/** 
 	 * Updated den Memory Log
 	 */
 	private void updateMemoryLog() {
-		if (!dumpMemory) return;
+		
+		if (!controlPanelController.memoryDumpCheckBoxBP().get()) return;
 		
 		StringBuilder currentMemoryLogEntry = new StringBuilder();
 		currentMemoryLogEntry.append("########### Instruction Number: " + currentInstruction + " ###########" + System.lineSeparator());
-		currentMemoryLogEntry.append(dumpMemory(getRetro24(), dumpMemoryFrom, dumpMemoryTo) + System.lineSeparator());
+		currentMemoryLogEntry.append(dumpMemory(retro24, controlPanelController.getMemoryDumpStartAddress(), controlPanelController.getMemoryDumpEndAddress()) + System.lineSeparator());
 		
 		memoryLog.offer(currentMemoryLogEntry.toString());
 	}
@@ -280,12 +237,12 @@ public class ScreenViewController {
 	 * Updated den Instruction Log
 	 */
 	private void updateInstructionLog() {
-		if (!instructionInfoLog) return;
+		if (!controlPanelController.instructionInfoCheckBoxBP().get()) return;
 		
 		StringBuilder currentInstructionLogEntry = new StringBuilder();
 		currentInstructionLogEntry.append("### Instruction Number: " + currentInstruction + System.lineSeparator());
 		currentInstructionLogEntry.append("##  " + cpu.getLastInstruction() + " " + byteArrayToString(cpu.getLastInstruction().getArgs()) + System.lineSeparator());
-		currentInstructionLogEntry.append(dumpLastCPUInstruction(getRetro24()) + System.lineSeparator());
+		currentInstructionLogEntry.append(dumpLastCPUInstruction(retro24) + System.lineSeparator());
 		instructionLog.offer(currentInstructionLogEntry.toString());
 	}
 	
@@ -307,44 +264,50 @@ public class ScreenViewController {
 		}
 	}
 	
-	public void stopSystem() {
-		this.retro24.getCPU().setHalt(true);
-	}
-	
-	public void setProgramPath(String path) {
-		this.programPath = path;
-	}
-	
-	public void setControlPanelController(ControlPanelController controlPanelController) {
-		this.controlPanelController = controlPanelController;
-	}
-	
-	public Retro24 getRetro24() {
-		return this.retro24;
-	}
-
-	public Node getCanvas() {
-		// TODO Auto-generated method stub
-		return screenView.getCanvas();
-	}
-	
 	private synchronized void incrementInstructionCounter() {
 	    currentInstruction += 1;
 	}
 	
-	public BooleanProperty isSystemRunningProperty() {
-		return this.systemRunning;
+	/**
+	 * Übermittelt alle Logs an ihre observable Gegenstücke, welche an die ListViews gebunden sind,
+	 * somit werden diese auch angezeigt.
+	 */
+	public void drainLogs() {
+		drainMemoryLog();
+		drainInstructionLog();
 	}
 	
 	/**
-	 * Gibt die Logs in die View Logs
+	 * Übermittelt das memoryLog an sein observable Gegenstück, welches an die ListView gebunden ist,
+	 * somit erscheinen die Einträge in der ListView Anzeige.
 	 */
-	public void drainLogs() {
-		if (dumpMemory) {
-			memoryLog.drainTo(memoryLogObs);
-		}
-		if (instructionInfoLog) {
-	        instructionLog.drainTo(instructionLogObs);
-		}
+	public void drainMemoryLog() {
+		if (!controlPanelController.memoryDumpCheckBoxBP().get()) return;
+		memoryLog.drainTo(memoryLogObs);
+	}
+	
+	/**
+	 * Übermittelt das instructionLog an sein observable Gegenstück, welches an die ListView gebunden ist,
+	 * somit erscheinen die Einträge in der ListView Anzeige.
+	 */
+	public void drainInstructionLog() {
+		if (!controlPanelController.instructionInfoCheckBoxBP().get()) return;
+		instructionLog.drainTo(instructionLogObs);
+	}
+	
+	public ObservableList<String> getMemoryLogObservable() {
+		return memoryLogObs;
+	}
+	
+	public ObservableList<String> getInstructionLogObservable() {
+		return instructionLogObs;
+	}
+	
+	public BooleanProperty systemRunningBP() {
+		return systemRunningBP;
+	}
+	
+	public BooleanProperty cpuPausedBP() {
+		return cpuPausedBP;
 	}
 }

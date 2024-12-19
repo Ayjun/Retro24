@@ -1,14 +1,17 @@
 package gui.view;
 
+import java.io.File;
 import java.io.IOException;
 
 import gui.controller.ControlPanelController;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 public class ControlPanelView extends Application{
@@ -29,7 +32,8 @@ public class ControlPanelView extends Application{
 				root = loader.load();
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
-				e.printStackTrace();
+				e.printStackTrace(); // Gibt den gesamten Stacktrace aus, einschließlich der unterdrückten Zeilen
+			    throw new RuntimeException("Fehler beim Laden der FXML-Datei", e);
 			}
 
 	        // diese View an den Controller übergeben:
@@ -47,11 +51,24 @@ public class ControlPanelView extends Application{
 	    }
 	 
 	 	public void showError(String title, String message) {
-	 		Alert alert = new Alert(AlertType.ERROR);
-	 		alert.setTitle(title);
-	 		alert.setContentText(message);
-	 		alert.show();
+	 		Platform.runLater(() -> {
+	 			Alert alert = new Alert(AlertType.ERROR);
+		 		alert.setTitle(title);
+		 		alert.setContentText(message);
+		 		alert.show();
+	 		});
 	 	}
+	 	
+	 	public String openFileDialog() {
+	        FileChooser fileChooser = new FileChooser();
+	        fileChooser.setTitle("Programm auswählen");
+	        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter(".bin", "*.bin"));
+	        File selectedFile = fileChooser.showOpenDialog(getStage());
+	        if (selectedFile != null) {
+	           return selectedFile.getAbsolutePath();
+	        }
+			return null;
+	    }
 	 	
 
 	    public static void main(String[] args) {

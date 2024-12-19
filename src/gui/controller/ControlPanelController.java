@@ -2,34 +2,27 @@ package gui.controller;
 
 import java.io.File;
 
-import core.Retro24;
-
 import static util.NumberUtil.*;
+import static util.StringUtil.*;
+import static util.JavaFXUtil.*;
 
 import gui.view.ControlPanelView;
-import javafx.animation.Animation.Status;
-import javafx.animation.KeyFrame;
-import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
 import javafx.collections.ListChangeListener;
 import javafx.fxml.FXML;
-import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
-import javafx.scene.control.SelectionMode;
-import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.text.Text;
-import javafx.scene.text.TextFlow;
-import javafx.stage.FileChooser;
-import javafx.util.Duration;
 
 /**
  * @author Eric Schneider
@@ -42,8 +35,6 @@ public class ControlPanelController {
 	// FXML Attribute (SceneBuilder):
 	@FXML
 	private Button startButton;
-	@FXML
-	private TextField pathInputText;
 	@FXML
 	private Button lookForFileButton;
 	@FXML
@@ -65,6 +56,8 @@ public class ControlPanelController {
 	@FXML
 	private TextField bisMemoryDumpInput;
 	@FXML
+	private TextField pathInputText;
+	@FXML
 	private Text vonMemoryDumpText;
 	@FXML
 	private Text bisMemoryDumpText;
@@ -73,19 +66,53 @@ public class ControlPanelController {
 	
 	// Referenz auf View:
 	private ControlPanelView controlPanelView;
-	// Referenz auf ScreenViewController:
-	private ScreenViewController sc;
 	
-	// Enthält Info darüber, ob CPU laufen soll:
-	private BooleanProperty cpuPaused = new SimpleBooleanProperty(false);
+	// Referenz auf ScreenViewController:
+	private ScreenViewController screenViewController;
+
+	// BooleanProperties der Checkboxen (beim Start sind sie false):
+	private BooleanProperty instructionInfoCheckBoxBP = new SimpleBooleanProperty(false);
+	private BooleanProperty memoryDumpCheckBoxBP = new SimpleBooleanProperty(false);
+	private BooleanProperty haltCPUCheckBoxBP = new SimpleBooleanProperty(false);
+	
+	// BooleanProperty ob die CPU grade im Moment pausiert ist:
+	private BooleanProperty cpuPausedBP = new SimpleBooleanProperty(false);
+
+	// Boolean Property dass die Input-Möglichkeiten des Users freigibt oder sperrt,
+	// dies wird später gebunden an das systemRunningBP des screenViewController.
+	// Läuft das System, sind keine Änderungen möglich. Das inputInactive wird
+	// jedoch schon true geschaltet, kurz bevor systemRunningBP gebunden wird,
+	// um zu vermeiden, dass während dieser kurzen Zwischenzeit (start Drücken und bevor
+	// systemRunning) keine Änderungen an den Values wie den Checkboxen erfolgen können, 
+	// da deren Werte teilweise live während des Laufens des Systems abgefragt werden.
+	private BooleanProperty inputInactiveBP = new SimpleBooleanProperty(false);
+	
+	// String Properties:
+	// Properties vonMemoryDumpInput und bisMemoryDumpInput
+	private StringProperty memoryDumpInputFromSP = new SimpleStringProperty();
+	private StringProperty memoryDumpInputToSP = new SimpleStringProperty();
+	
+	// Property von pathInputText (Dateipfadeingabe)
+	private StringProperty pathInputTextSP = new SimpleStringProperty();
 	
 	/**
-	 * Methode zum Erledigen von Dingen vor dem eigentlichen Systemstart (im ControlPanelController).
+	 * Methode die durch javaFX automatisch aufgerufen wird, nachdem das Controller-Objekt
+	 * erstellt wurde. Hier werden Dinge die direkt nach Erzeugung des Objekts nötig sind erledigt.
 	 */
-	public void beforeRunControlPanelController() {
+	public void initialize() {
+		initStyle();
+		bindInternalProperties();
+		setUpInternalListeners();
+	}
+	
+	/**
+	 * Methode zum Erledigen von Aktivitäten nach dem Anlegen des ScreenView Objekts
+	 * aber VOR dem tatsächlichen Start der ScreenView.
+	 */
+	private void runBeforeScreenViewStart() {
 		initHandlers();
-		bindProperties();
-		initStyle();	
+		bindExternalProperties();
+		setUpExternalListeners();
 	}
 	
 	/**
@@ -93,12 +120,11 @@ public class ControlPanelController {
 	 */
 	public void initStyle() {
 		// LISTVIEWS (memoryDump und instructionInfo):
-		
 		// Setzen der CSS-Eigenschaften für den Text (monospace, 13px) der ListViews
 		instructionInfoListView.setStyle("-fx-font-family: 'monospace'; -fx-font-size: 13px;");
 		memoryDumpListView.setStyle("-fx-font-family: 'monospace'; -fx-font-size: 13px;");
 		
-		// Alle Tabellenzeilen sollen weißen Hintergrund haben:
+		// Alle instructionInfo Tabellenzeilen sollen weißen Hintergrund haben:
 		instructionInfoListView.setCellFactory(lv -> new ListCell<>() {
 		    @Override
 		    protected void updateItem(String item, boolean empty) {
@@ -114,7 +140,7 @@ public class ControlPanelController {
 		    }
 		});
 
-		// Alle Tabellenzeilen sollen weißen Hintergrund haben:
+		// Alle memoryDump Tabellenzeilen sollen weißen Hintergrund haben:
 		memoryDumpListView.setCellFactory(lv -> new ListCell<>() {
 		    @Override
 		    protected void updateItem(String item, boolean empty) {
@@ -132,78 +158,134 @@ public class ControlPanelController {
 	}
 	
 	/**
-	 * Binden von Properties
+	 * Binden von lokalen (in diesem controlPanelController vorhandenen) Properties
 	 */
-	public void bindProperties() {
-		haltCPUCheckBox.disableProperty().bind(sc.isSystemRunningProperty());
-		instructionInfoCheckBox.disableProperty().bind(sc.isSystemRunningProperty());
-		memoryDumpCheckBox.disableProperty().bind(sc.isSystemRunningProperty());
-		vonMemoryDumpInput.disableProperty().bind(sc.isSystemRunningProperty());
-		bisMemoryDumpInput.disableProperty().bind(sc.isSystemRunningProperty());
-		instructionInfoListView.setItems(sc.getInstructionLogObservable());
-		memoryDumpListView.setItems(sc.getMemoryLogObservable());
+	public void bindInternalProperties() {
 		
+		// Die Checkboxen an ihre BooleanProperties binden:
+		memoryDumpCheckBoxBP.bind(memoryDumpCheckBox.selectedProperty());
+		instructionInfoCheckBoxBP.bind(instructionInfoCheckBox.selectedProperty());
+		haltCPUCheckBoxBP.bind(haltCPUCheckBox.selectedProperty()); // Achtung wegen evtl. invertieren!
 		
-		if (instructionInfoCheckBox.isSelected()) {
-			instructionInfoListView.getItems().addListener((ListChangeListener<String>) change -> {
-			    while (change.next()) {
-			        if (change.wasAdded() || change.wasReplaced()) {
-			            Platform.runLater(() -> instructionInfoListView.scrollTo(instructionInfoListView.getItems().size()));
-			        }
-			    }
-			});
-		}
+		// Die CheckBoxBooleanProperties an ihre Sichtbarkeits-Abängigkeiten binden:
+		// memoryDump Sichtbarkeitsabhängigkeiten:
+		vonMemoryDumpInput.visibleProperty().bind(memoryDumpCheckBoxBP);
+		vonMemoryDumpText.visibleProperty().bind(memoryDumpCheckBoxBP);
+		bisMemoryDumpInput.visibleProperty().bind(memoryDumpCheckBoxBP);
+		bisMemoryDumpText.visibleProperty().bind(memoryDumpCheckBoxBP);
+		memoryDumpListView.visibleProperty().bind(memoryDumpCheckBoxBP);
+		vonMemoryDumpInput.visibleProperty().bind(memoryDumpCheckBoxBP);
+		bisMemoryDumpInput.visibleProperty().bind(memoryDumpCheckBoxBP);
+		// cpuInstruction Sichtbarkeitsabhängigkeiten:
+		instructionInfoListView.visibleProperty().bind(instructionInfoCheckBoxBP);
+		// haltCPU Sichtbarkeitsabhängigkeiten:
+		cpuStepButton.visibleProperty().bind(haltCPUCheckBoxBP);
+		cpuStepButtonImage.visibleProperty().bind(haltCPUCheckBoxBP);
+		einrastenText.visibleProperty().bind(haltCPUCheckBoxBP);
 		
+		// Die InputFelder an ihre StringProperties binden:
+		memoryDumpInputToSP.bind(bisMemoryDumpInput.textProperty());
+		memoryDumpInputFromSP.bind(vonMemoryDumpInput.textProperty());
+		pathInputTextSP.bind(pathInputText.textProperty());
 		
-		if (memoryDumpCheckBox.isSelected()) {
-			memoryDumpListView.getItems().addListener((ListChangeListener<String>) change -> {
-			    while (change.next()) {
-			        if (change.wasAdded() || change.wasReplaced()) {
-			            Platform.runLater(() -> memoryDumpListView.scrollTo(memoryDumpListView.getItems().size()));
-			        }
-			    }
-			});
-		}
-		
-		
-		// TEST ENDE
+		// Inaktivität (disableProperty) der Input-Elemente an inputInactiveBP binden
+		haltCPUCheckBox.disableProperty().bind(inputInactiveBP());
+		instructionInfoCheckBox.disableProperty().bind(inputInactiveBP());
+		memoryDumpCheckBox.disableProperty().bind(inputInactiveBP());
+		vonMemoryDumpInput.disableProperty().bind(inputInactiveBP());
+		bisMemoryDumpInput.disableProperty().bind(inputInactiveBP());
 	}
 	
+	/**
+	 * Erstellen von lokalen (innerhalb des controlPanelController) Listenern
+	 */
+	public void setUpInternalListeners() {
+	// Listener auf Änderung der CPU-halten Checkbox um CPU-Pause zu setzen:
+			haltCPUCheckBoxBP().addListener((obs, oldValue, newValue) -> {
+				if (newValue) {
+					cpuPausedBP().set(true);
+				}
+			});
+	}
 	
+	/**
+	 * Bindet alle externen Properties (extern = aus anderen Objekten)
+	 */
+	public void bindExternalProperties() {
+		bindExternalPropertiesScreenViewController();
+	}
+	
+	/**
+	 * Binden von externen (im screenViewController vorhandenen) Properties
+	 */
+	public void bindExternalPropertiesScreenViewController() {
+		
+		// Die inputInactiveBP an systemRunningBP aus screenViewController binden s.o. langer Kommentar
+		inputInactiveBP.bind(screenViewController.systemRunningBP());
+		
+		// Die Logs auf die Listview schalten
+		instructionInfoListView.setItems(screenViewController.getInstructionLogObservable());
+		memoryDumpListView.setItems(screenViewController.getMemoryLogObservable());
+	}
+	
+	/**
+	 * Setzen von Listenern mit externen Abhängigkeiten
+	 */
+	public void setUpExternalListeners() {
+		// Listener auf screenViewController.systemRunningBP, 
+		// um das Binding von inputInactiveBP zu entfernen, wenn sich systemRunningBP auf false ändert.
+		// Denn falls wir nochmal den Startknopf drücken muss es wegen inputInactiveBP.set() unbinded sein.
+		screenViewController.systemRunningBP().addListener((obs, oldValue, newValue) -> {
+            if (!newValue) { // Wenn `systemRunningBP` auf `false` wechselt
+                inputInactiveBP.unbind();
+            }
+        });
+		
+		// Listener auf neue Listeneinträge für Autoscroll:
+		// instructionInfo automatisch herunterscrollen
+		instructionInfoListView.getItems().addListener((ListChangeListener<String>) change -> {
+		    tailInstructionListView();
+		});
+		
+		// memoryInfo automatisch herunterscrollen
+		memoryDumpListView.getItems().addListener((ListChangeListener<String>) change -> {
+		    tailMemoryDumpListView();
+		});
+		
+	}
+		
 	public void initHandlers() {
     
         // CPU Step Button Handler:
         cpuStepButton.setOnMouseClicked((event) -> {
         	// Wenn die CPU aktuell pausiert ist und Rechtsklick:
-        	if (event.getButton() == MouseButton.SECONDARY && cpuPaused.get()) {
-        		cpuPaused.set(false);
+        	if (event.getButton() == MouseButton.SECONDARY && cpuPausedBP().get()) {
+        		cpuPausedBP().set(false);
         	}
         	// Wenn die CPU aktuell nicht pausiert ist und Rechtsklick:
-        	else if (event.getButton() == MouseButton.SECONDARY && !cpuPaused.get()) {
-        		cpuPaused.set(true);
+        	else if (event.getButton() == MouseButton.SECONDARY && !cpuPausedBP().get()) {
+        		cpuPausedBP().set(true);
         	}
         	// Wenn die CPU pausiert ist und Linksklick:
-        	else if (event.getButton() == MouseButton.PRIMARY && cpuPaused.get()) {
-        		try {
-					sc.stepCPU();
-					sc.drainLogs();
-				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
+        	else if (event.getButton() == MouseButton.PRIMARY && cpuPausedBP().get()) {
+				screenViewController.stepCPU();
+				screenViewController.drainLogs();
         	}
         	// Wenn die CPU nicht pausiert ist und Linksklick:
-        	else if (event.getButton() == MouseButton.PRIMARY && !cpuPaused.get()) {
-        		cpuPaused.set(true);
+        	else if (event.getButton() == MouseButton.PRIMARY && !cpuPausedBP().get()) {
+        		cpuPausedBP().set(true);
         	}
         });
         
-        // ListViews sollen nicht auf Clicks reagieren:
+        // ListViews sollen bei Mausinteraktion NUR auf die Scrollbar reagieren:
+        // Für memoryDumpListView
         memoryDumpListView.addEventFilter(MouseEvent.MOUSE_PRESSED, event -> {
             if (!isScrollBar(event.getTarget())) {
                 event.consume(); // Alle anderen Klicks blockieren
             }
         });
+        
+        // Für instructionInfoListView
         instructionInfoListView.addEventFilter(MouseEvent.MOUSE_PRESSED, event -> {
             if (!isScrollBar(event.getTarget())) {
                 event.consume(); // Alle anderen Klicks blockieren
@@ -211,71 +293,144 @@ public class ControlPanelController {
         });
 	}
 	
-	// Hilfsmethode zur Prüfung, ob Ziel oder ein Elternteil eine ScrollBar ist
-	private boolean isScrollBar(Object target) {
-	    if (target instanceof javafx.scene.control.ScrollBar) {
-	        return true;
-	    }
-	    if (target instanceof Node) {
-	        Node node = (Node) target;
-	        while (node != null) {
-	            if (node instanceof javafx.scene.control.ScrollBar) {
-	                return true;
-	            }
-	            node = node.getParent();
-	        }
-	    }
-	    return false;
+	/**
+	 * Behandelt den Click auf den Start Button im Retro24 ControlPanel
+	 */
+	@FXML 
+	public void handleStartButtonClick() {
+		clearListViews();
+		closeOldScreens();
+		
+		// Vor Validierung input Möglichkeiten deaktivieren (s.o. langer Kommentar)
+		inputInactiveBP.set(true);
+		if (!validateValues()) {
+			// Falls ungültiger Wert wieder freigeben:
+			inputInactiveBP.set(false);
+			return;
+		}
+
+		// Neuen ScreenViewController (steuert Retro24 Instanz) anlegen:
+		screenViewController = new ScreenViewController(this, pathInputTextSP().get());
+		
+		runBeforeScreenViewStart();
+		
+		// Bildschirm des Retro24 anzeigen:
+		screenViewController.showScreen();
+	}
+	
+	/**
+	 * Validiert die Gültigkeit der Parameter auf die der ScreenViewController zugreift /
+	 * die an ihn übergeben werden.
+	 * @return 
+	 */
+	private boolean validateValues() {
+		return validateProgramPath() && validateMemoryDumpAddresses();
 	}
 
-	public void setControlPanelView(ControlPanelView controlPanelView) {
-		this.controlPanelView = controlPanelView;
-	}
-	
-	/** 
-	 * Behandelt checken der CPU halten Checkbox
+	/**
+	 * Validiert die Gültigkeit der Speicheradressen in den entsprechenden Input Feldern,
+	 * sowie die Gültigkeit der Addressrange.
+	 * @return true wenn gülitg, sonst false
 	 */
-	@FXML
-	public void handleCheckHaltCPUCheckBox() {
-		if (haltCPUCheckBox.isSelected()) {
-			cpuStepButton.setVisible(true);
-			cpuStepButtonImage.setVisible(true);
-			einrastenText.setVisible(true);
-			cpuPaused().set(true);
-			return;
+	private boolean validateMemoryDumpAddresses() {
+		// Wenn Checkbox inaktiv:
+		if (!memoryDumpCheckBoxBP.get()) {
+			return true;
 		}
-		cpuStepButton.setVisible(false);
-		cpuStepButtonImage.setVisible(false);
-		einrastenText.setVisible(false);
-		cpuPaused().set(false);
+
+		if (!validateMemoryDumpStartAddress() || !validateMemoryDumpEndAddress()) {
+			return false;
+		}
+		
+		Integer start = hexStringToInt(memoryDumpInputFromSP.get());
+		Integer end = hexStringToInt(memoryDumpInputToSP.get());
+		
+		if (start > end) {
+			controlPanelView.showError("Ungültige Adresse!", "Startadresse ist größer als Endaddrese!");
+			return false;
+		}
+		
+		if (end - start > MAXMEMDUMP) {
+			controlPanelView.showError("Ungültige Adressraum!", "Maximaler Addressbereich von " + intToHexString(MAXMEMDUMP) +  
+					" ist überschritten!");
+			return false;
+		}
+		
+		return true;
 	}
 	
-	@FXML
-	public void handleCheckInstructionInfoCheckBox() {
-		if (instructionInfoCheckBox.isSelected()) {
-			instructionInfoListView.setVisible(true);
-			return;
+	/**
+	 * Validiert die Gültigkeit der memoryDumpStartAddress aus dem memoryDumpInputFromSP Input Feld.
+	 * @return true wenn gülitg, sonst false
+	 */
+	private boolean validateMemoryDumpStartAddress() {
+		// Wenn Checkbox inaktiv:
+		if (!memoryDumpCheckBoxBP.get()) {
+			return true;
 		}
-		instructionInfoListView.setVisible(false);
+		
+		Integer address = null;
+ 		try {
+ 			address = hexStringToInt(memoryDumpInputFromSP().get());
+ 		}
+ 		catch (IllegalArgumentException e) {
+ 			controlPanelView.showError("Ungültige Adresse!", e.getMessage());
+ 			return false;
+ 		}
+ 		if (checkShortOverflow(address) || address == null || checkUnderflow(address)) {
+ 			controlPanelView.showError("Ungültige Adresse!", "Adresse liegt nicht im zulässigen Speicherbereich: " + address);
+ 			return false;
+ 		} 
+
+ 		return true;
 	}
 	
-	@FXML
-	public void handleCheckMemoryDumpCheckBox() {
-		if (memoryDumpCheckBox.isSelected()) {
-			vonMemoryDumpInput.setVisible(true);
-			vonMemoryDumpText.setVisible(true);
-			bisMemoryDumpInput.setVisible(true);
-			bisMemoryDumpText.setVisible(true);
-			memoryDumpListView.setVisible(true);
-			vonMemoryDumpInput.setText("0x0100");
-			bisMemoryDumpInput.setText("0x01FF");
+	/**
+	 * Validiert die Gültigkeit der memoryDumpStartAddress aus dem memoryDumpInputFromSP Input Feld.
+	 * @return true wenn gülitg, sonst false
+	 */
+	private boolean validateMemoryDumpEndAddress() {
+		// Wenn Checkbox inaktiv:
+		if (!memoryDumpCheckBoxBP.get()) {
+			return true;
+		}
+		
+		Integer address = null;
+ 		try {
+ 			address = hexStringToInt(memoryDumpInputToSP().get());
+ 		}
+ 		catch (IllegalArgumentException e) {
+ 			controlPanelView.showError("Ungültige Adresse!", e.getMessage());
+ 			return false;
+ 		}
+ 		if (checkShortOverflow(address) || address == null || checkUnderflow(address)) {
+ 			controlPanelView.showError("Ungültige Adresse!", "Adresse liegt nicht im zulässigen Speicherbereich: " + address);
+ 			return false;
+ 		} 
+ 		return true;
+	}
+	
+	/**
+	 * Validiert die Gültigkeit des Programmpfads in den entsprechenden Input Feldern.
+	 * @return true wenn gülitg, sonst false
+	 */
+	private boolean validateProgramPath() {
+		File file = new File(pathInputTextSP().get());
+		if (!file.exists()) return false;
+		if (!file.getName().endsWith(".bin")) return false;
+		return true;
+	}
+
+	/**
+	 * Wenn es bereits einen screenViewController gab, schließe seine ScreenView
+	 * und lösche die Referenz.
+	 */
+	public void closeOldScreens() {
+		if (screenViewController == null) {
 			return;
 		}
-		vonMemoryDumpInput.setVisible(false);
-		vonMemoryDumpText.setVisible(false);
-		bisMemoryDumpInput.setVisible(false);
-		bisMemoryDumpText.setVisible(false);
-		memoryDumpListView.setVisible(false);
+		screenViewController.closeScreen();
+		screenViewController = null;
 	}
 	
 	/**
@@ -292,177 +447,134 @@ public class ControlPanelController {
 	}
 	
 	/**
-	 * Behandelt den Click auf den Start Button im Retro24 ControlPanel
+	 * Behandelt den Click auf ... Button zum Programmpfad suchen
 	 */
-	@FXML 
-	public void handleStartButtonClick() {
-		resetTextAreas();
-		
-		// Wenn es bereits einen screencontroller gab, dann schließe die Stage der zugehörigen View
-		// (Altes Retro24 Fenster schliessen)
-		if (sc!= null) {
-			sc.closeScreen();
-		}
-
-		// Neuen ScreenViewController (steuert Retro24 Instanz) anlegen:
-		sc = new ScreenViewController(this);
-		
-		if (!loadProgram()) {
-			return;
-		}
-		
-		// Falls MemoryDump Checkbox angehakt, die erforderlichen Infos im ScreenViewController setzen:
-		if (isDumpMemorySelected()) {
-			
-			if (getMemoryAddressFrom() == null || getMemoryAddressTo() == null) {
-				return;
-			}
-			
-			if (getMemoryAddressTo() - getMemoryAddressFrom() > MAXMEMDUMP) {
-				controlPanelView.showError("Ungültiger Adressbereich!", "Der maximal erlaubte Adressbereich ist überschritten!");
-				return;
-			}
-			
-			if (checkShortOverflow(getMemoryAddressTo()) || checkShortOverflow(getMemoryAddressFrom())
-					|| checkUnderflow(getMemoryAddressTo()) || checkUnderflow(getMemoryAddressFrom())) {
-				controlPanelView.showError("Ungültige Adresse!", "Die Adressen müssen im Bereich " 
-					+ String.format("0x%02X", Retro24.MEMORYSTART)  
-					+ " bis " 
-					+ String.format("0x%02X", Retro24.MEMORYEND) 
-					+ " liegen!");
-				return;
-			}
-			
-			sc.setDumpMemory(getMemoryAddressFrom(), getMemoryAddressTo());
-		}
-		
-		beforeRunControlPanelController();
-		// Bildschirm des Retro24 anzeigen:
-		sc.showScreen();
-		
-	}
-	
 	public void handleLookForFileButtonClick() {
-		String path = openFileDialog();
+		String path = controlPanelView.openFileDialog();
 		pathInputText.setText(path);
 	}
+		
+	/**
+	 * Scrollt in allen ListViews ganz nach unten.
+	 */
+	public void tail() {
+ 		tailMemoryDumpListView();
+ 		tailInstructionListView();
+ 	}
 	
- 	public String openFileDialog() {
-        FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Datei auswählen");
-        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("binaries", "*.bin"));
-
-        File selectedFile = fileChooser.showOpenDialog(controlPanelView.getStage());
-        if (selectedFile != null) {
-           return selectedFile.getAbsolutePath();
-        }
-		return null;
-    }
- 	
- 	public void setScreenViewController(ScreenViewController screenViewController) {
- 		this.sc = screenViewController;
- 	}
-
- 	
- 	/**
- 	 * Lädt ein Prorgramm vom angegebenen Pfad (Textinput)
- 	 * @return true wenn erfolgreich, false wenn nicht
- 	 */
- 	public boolean loadProgram() {
- 		String programPath = pathInputText.getText(); // Pfad des zu startenden Programmes aus Input lesen
-		
-		File f = new File(programPath);
-		
-		if (!f.isFile()) {
-			controlPanelView.showError("Programm nicht gefunden!", "Das Programm:\n\n" + programPath + "\n\nkonnte nicht gefunden werden!");
-			return false;
+	/**
+	 * Scrollt in der memoryDumpListView ganz nach unten
+	 */
+	public void tailMemoryDumpListView() {
+		if (!memoryDumpCheckBoxBP().get()  || memoryDumpListView.getItems() == null) {
+			return;
 		}
-		
-		sc.setProgramPath(programPath);
-		return true;
- 	}
- 	
- 	public Integer getMemoryAddressFrom() {
- 		String address = this.vonMemoryDumpInput.getText();
- 		
- 		if (address == null || address.isEmpty()) {
- 	    	controlPanelView.showError("Ungültige Adresse!", "Die Adresse darf nicht leer sein.");
- 	    }
-
- 	    if (!address.startsWith("0x")) {
- 	    	controlPanelView.showError("Ungültige Adresse!", "Die Adresse muss mit '0x' beginnen.");
- 	    }
-
- 	    try {
- 	        // Entferne den Präfix "0x" und parse den Rest als Hexadezimalwert
- 	        return Integer.parseInt(address.substring(2), 16);
- 	    } catch (Exception e) {
- 	    	controlPanelView.showError("Ungültige Adresse!", "Die Adresse ist kein gültiger Hexadezimalwert: " + address.toString());
- 	    }
- 	    
- 	    return null;
- 	}
- 	
- 	public Integer getMemoryAddressTo() {
- 		String address = this.bisMemoryDumpInput.getText();
- 		
- 	    if (address == null || address.isEmpty()) {
- 	    	controlPanelView.showError("Ungültige Adresse!", "Die Adresse darf nicht leer sein.");
- 	    	return null;
- 	    }
-
- 	   if (!address.startsWith("0x")) {
- 	    	controlPanelView.showError("Ungültige Adresse!", "Die Adresse muss mit '0x' beginnen.");
- 	    	return null;
- 	    }
-
- 	    try {
- 	        // Entferne den Präfix "0x" und parse den Rest als Hexadezimalwert
- 	        return Integer.parseInt(address.substring(2), 16);
- 	    } catch (NumberFormatException e) {
- 	    	controlPanelView.showError("Ungültige Adresse!", "Die Adresse ist kein gültiger Hexadezimalwert: " + address.toString());
- 	    }
- 	    
- 	    return null;
- 	}
- 	
- 	public void tail() {
- 		Platform.runLater(() -> {
- 			if (isDumpMemorySelected()  && this.memoryDumpListView.getItems() != null) {
- 				memoryDumpListView.scrollTo(memoryDumpListView.getItems().size());
- 			}
- 			if (instructionInfoCheckBox.isSelected() && this.instructionInfoListView.getItems() != null) {
- 				instructionInfoListView.scrollTo(instructionInfoListView.getItems().size());
- 			}
- 		});
- 	}
- 	
+		Platform.runLater(() -> {
+			memoryDumpListView.scrollTo(memoryDumpListView.getItems().size());
+		});
+	}
+	
+	/**
+	 * Scrollt in der instructionListView ganz nach unten
+	 */
+	public void tailInstructionListView() {
+		if (!instructionInfoCheckBoxBP().get() || instructionInfoListView.getItems() == null) {
+			return;
+		}
+		Platform.runLater(() -> {
+			instructionInfoListView.scrollTo(instructionInfoListView.getItems().size());
+		});
+	}
  	
  	/**
- 	 * Resettet die Textareas
+ 	 * Wandelt den Wert im memoryDumpInputFrom Feld in einen Integer Wert um und gibt ihn zurück,
+ 	 * prüft vorher die Adresse auf Gültigkeit.
+ 	 * @return Integer Repräsentation oder null bei ungültiger Adresse
  	 */
- 	public void resetTextAreas() {
- 		if (isDumpMemorySelected() && this.memoryDumpListView.getItems() != null) {
- 			this.memoryDumpListView.getItems().clear();
+ 	public Integer getMemoryDumpStartAddress() {
+ 		if (!validateMemoryDumpStartAddress()) {
+ 			return null;
  		}
- 		if (instructionInfoCheckBox.isSelected() && this.instructionInfoListView.getItems() != null) {
- 	 		this.instructionInfoListView.getItems().clear();
+ 	    return hexStringToInt(memoryDumpInputFromSP().get());
+ 	}
+ 	
+ 	/**
+ 	 * Wandelt den Wert im memoryDumpInputTo Feld in einen Integer Wert um und gibt ihn zurück,
+ 	 * prüft hierbei die Adresse auf Gültigkeit.
+ 	 * @return Integer Repräsentation oder null bei ungültiger Adresse
+ 	 */
+ 	public Integer getMemoryDumpEndAddress() {
+ 		if (!validateMemoryDumpEndAddress()) {
+ 			return null;
  		}
+ 	    return hexStringToInt(memoryDumpInputToSP().get());
  	}
  	
- 	public boolean isInstructionInfoSelected() {
- 		return this.instructionInfoCheckBox.isSelected();
+ 	/**
+ 	 * Cleared alle ListViews
+ 	 */
+ 	public void clearListViews() {
+ 		clearMemoryDumpListView();
+ 		clearInstructionInfoListView();
  	}
  	
- 	public boolean isDumpMemorySelected() {
- 		return this.memoryDumpCheckBox.isSelected();
+ 	/**
+ 	 * Cleared die memoryDumpListView
+ 	 */
+ 	public void clearMemoryDumpListView() {
+ 		if (!memoryDumpCheckBoxBP().get() || memoryDumpListView.getItems() == null) {
+ 			return;
+ 		}
+ 		memoryDumpListView.getItems().clear();
  	}
  	
- 	public boolean isCPUHaltenSelected() {
- 		return this.haltCPUCheckBox.isSelected();
+ 	/**
+ 	 * Cleared die instructionInfoListView
+ 	 */
+ 	public void clearInstructionInfoListView() {
+ 		if (!instructionInfoCheckBoxBP.get() || instructionInfoListView.getItems() == null) {
+ 	 		return;
+ 		}
+ 		instructionInfoListView.getItems().clear();
  	}
  	
- 	public BooleanProperty cpuPaused() {
- 		return this.cpuPaused;
+ 	public BooleanProperty instructionInfoCheckBoxBP() {
+ 		return instructionInfoCheckBoxBP;
  	}
+ 	
+ 	public BooleanProperty memoryDumpCheckBoxBP() {
+ 		return memoryDumpCheckBoxBP;
+ 	}
+ 	
+ 	public BooleanProperty haltCPUCheckBoxBP() {
+ 		return haltCPUCheckBoxBP;
+ 	}
+ 	
+ 	public BooleanProperty cpuPausedBP() {
+ 		return cpuPausedBP;
+ 	}
+
+ 	public BooleanProperty inputInactiveBP() {
+ 		return inputInactiveBP;
+ 	}
+ 	
+ 	private StringProperty memoryDumpInputFromSP() {
+ 		return memoryDumpInputFromSP;
+ 	}
+ 	
+ 	private StringProperty memoryDumpInputToSP() {
+ 		return memoryDumpInputToSP;
+ 	}
+ 	
+ 	private StringProperty pathInputTextSP() {
+ 		return pathInputTextSP;
+ 	}
+ 	
+ 	/**
+ 	 * Übergibt die controlPanelView Referenz an dieses Objekt (den ControlPanelController).
+ 	 * @param controlPanelView
+ 	 */
+	public void setControlPanelView(ControlPanelView controlPanelView) {
+		this.controlPanelView = controlPanelView;
+	}
 }
