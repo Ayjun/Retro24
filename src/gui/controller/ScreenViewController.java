@@ -30,7 +30,7 @@ public class ScreenViewController {
 	/**
 	 * Die CPU-Frequenz in Hz
 	 */
-	public static final int CPUFREQUENCY = 1000;
+	public static final int CPUFREQUENCY = 100;
 	
 	private final Retro24 retro24;
 	private final ControlPanelController controlPanelController;

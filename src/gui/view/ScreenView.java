@@ -58,42 +58,53 @@ public class ScreenView {
     // 0=dunkel, 1=hell ab $E000 und einmal
     // 0=monochrom, 1=farbig ab $F000
     public void updateScreen(byte[] memory) {
-    	GraphicsContext gc = canvas.getGraphicsContext2D();
-        gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
+        GraphicsContext gc = canvas.getGraphicsContext2D();
+        
+        int[][] pixelColors = new int[GraphicChip.PIXEL_HEIGHT][GraphicChip.PIXEL_WIDTH];
         
         int videoMemPos = 0;
-    	for (int i=0; i < GraphicChip.PIXEL_HEIGHT; i ++) {
-    		for (int j = 0; j < GraphicChip.PIXEL_WIDTH; j ++, videoMemPos++) {
-    			
-    			// Berechne die Speicheradressen der Werte für Helligkeit und Farbe für den aktuellen Pixel:
-    			int darkLightIndex = DARK_LIGHT_START_ADDRESS + videoMemPos;
-    			int colorIndex = COLOR_START_ADDRESS + videoMemPos;
-			
-    			boolean brightness = (memory[darkLightIndex] & 0x1) == 1;
-    			boolean colorValue = (memory[colorIndex] & 0x1) == 1;
-    			
-    			// Berechne die Farbe basierend auf den Werten
-                Color color = calculateColor(brightness, colorValue);
+        for (int i = 0; i < GraphicChip.PIXEL_HEIGHT; i++) {
+            for (int j = 0; j < GraphicChip.PIXEL_WIDTH; j++, videoMemPos++) {
+                int darkLightIndex = DARK_LIGHT_START_ADDRESS + videoMemPos;
+                int colorIndex = COLOR_START_ADDRESS + videoMemPos;
+                
+                // Sicherstellen, dass Speicherzugriffe nicht außerhalb der Arraygrenzen liegen
+                if (darkLightIndex < memory.length && colorIndex < memory.length) {
+                    boolean brightness = (memory[darkLightIndex] & 0x1) == 1;
+                    boolean colorValue = (memory[colorIndex] & 0x1) == 1;
+                    
+                    pixelColors[i][j] = calculateColorValue(brightness, colorValue);
+                }
+            }
+        }
+        
+        // Alles auf einmal zeichnen
+        gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
+        for (int i = 0; i < GraphicChip.PIXEL_HEIGHT; i++) {
+            for (int j = 0; j < GraphicChip.PIXEL_WIDTH; j++) {
+                gc.setFill(getColorFromValue(pixelColors[i][j]));
+                gc.fillRect(j * 10, i * 10, 10, 10);
+            }
+        }
+    }
+     
+    private int calculateColorValue(boolean brightness, boolean mode) {
+        if (!mode && !brightness) return 0; // Monochrom dunkel
+        if (!mode && brightness) return 1;  // Monochrom hell
+        if (mode && !brightness) return 2;  // Farbe dunkel (Blau)
+        if (mode && brightness) return 3;   // Farbe hell (Gelb)
+        return 0; // Fallback
+    }
 
-                // Zeichne den Pixel
-                gc.setFill(color);
-                gc.fillRect(j * 10, i * 10, 10, 10); // Skalierung: 10x10 pro Pixel
-    		}
-    	}
-    }	
-	/**
-	 * Berechnet die Farbe basierend auf Helligkeit und Modus.
-	 * @param brightness 0 = dunkel, 1 = hell
-	 * @param mode 0 = monochrom, 1 = farbig
-	 * @return Die entsprechende Farbe.
-	 */
-	private Color calculateColor (boolean brightness, boolean mode) {
-	    if (!mode && !brightness) return Color.BLACK; // Monochrom dunkel
-	    if (!mode && brightness) return Color.WHITE;  // Monochrom hell
-	    if (mode && !brightness) return Color.BLUE;   // Farbe dunkel (Blau)
-	    if (mode && brightness) return Color.YELLOW;  // Farbe hell (Gelb)
-	    return Color.BLACK; // Fallback (sollte nie passieren)
-	}
+    private Color getColorFromValue(int colorValue) {
+        switch (colorValue) {
+            case 0: return Color.BLACK;
+            case 1: return Color.WHITE;
+            case 2: return Color.BLUE;
+            case 3: return Color.YELLOW;
+            default: return Color.BLACK;
+        }
+    }
 	
 	public Stage getStage() {
 		return this.retro24Stage;

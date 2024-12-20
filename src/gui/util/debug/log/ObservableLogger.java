@@ -70,7 +70,6 @@ public class ObservableLogger <T extends Logger> {
                     } else {
                         // Elemente am Anfang der Liste entfernen
                         observableList.remove(0, elementsToRemove-1);
-                        System.out.println(elementsToRemove);
                         // Neue Logs hinzufügen
                         observableList.addAll(tempLogs);
                     }
