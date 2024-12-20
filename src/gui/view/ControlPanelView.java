@@ -50,6 +50,11 @@ public class ControlPanelView extends Application{
 	        primaryStage.show();
 	    }
 	 
+	 	/**
+	 	 * Zeigt einen Error in einem extra Error-Fenster an
+	 	 * @param title
+	 	 * @param message
+	 	 */
 	 	public void showError(String title, String message) {
 	 		Platform.runLater(() -> {
 	 			Alert alert = new Alert(AlertType.ERROR);
@@ -59,6 +64,10 @@ public class ControlPanelView extends Application{
 	 		});
 	 	}
 	 	
+	 	/**
+	 	 * Öffnet einen Dateiauswahldialog
+	 	 * @return String: Der Dateipfad der vom Benutzer ausgewählten Datei
+	 	 */
 	 	public String openFileDialog() {
 	        FileChooser fileChooser = new FileChooser();
 	        fileChooser.setTitle("Programm auswählen");

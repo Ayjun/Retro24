@@ -8,6 +8,7 @@ import common.util.debug.log.MemoryDumpLogger;
 import common.util.debug.log.MemoryDumper;
 import core.Retro24;
 import core.graphics.GraphicChip;
+import gui.util.debug.log.ObservableLogger;
 import gui.view.ScreenView;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -24,6 +25,8 @@ import javafx.util.Duration;
  * @author Eric Schneider
  */
 public class ScreenViewController {
+	// TODO Hinweis: Klasse ist noch nicht an die gleiche Designphilosophie wie der ControlPanelController gesetzt
+	// Bei Bedarf oder Langeweile wird das geändert. :D
 	/**
 	 * Die CPU-Frequenz in Hz
 	 */
@@ -34,18 +37,21 @@ public class ScreenViewController {
 	private final ScreenView screenView;
 	private final String programPath;
 	
-	
-	private MemoryDumpLogger memoryLogger;
-	private InstructionLogger instructionLogger;
-	
+	// Timeline die den 
 	private Timeline logTransfer;
 
 	// Boolean Properties:
 	private BooleanProperty systemRunningBP = new SimpleBooleanProperty(true);
 	private BooleanProperty cpuPausedBP = new SimpleBooleanProperty(false);
 	
-	ObservableList<String> memoryLogObs = FXCollections.observableArrayList();
-	ObservableList<String> instructionLogObs = FXCollections.observableArrayList();
+	// Die Observablelogger, hier werden die memory und CPU Instruktionen geloggt.
+	// Aus den Logs der Logger wird später in die ObservableList extrahiert.
+	private ObservableLogger<MemoryDumpLogger> memoryLogger;
+	private ObservableLogger<InstructionLogger> instructionLogger;
+	
+	// ObservableLists, diese werden in den ListViews im Retro24 Control Panel angezeigt.
+	private ObservableList<String> memoryLogObs = FXCollections.observableArrayList();
+	private ObservableList<String> instructionLogObs = FXCollections.observableArrayList();
 	
 	/**
 	 * Konstruktor des ScreenViewController
@@ -59,8 +65,8 @@ public class ScreenViewController {
 		this.retro24 = new Retro24();
 		retro24.initialize();
 		this.programPath = programPath;
-		this.memoryLogger = new MemoryDumpLogger(new MemoryDumper(retro24, memoryDumpConfig));
-		this.instructionLogger = new InstructionLogger(new InstructionDumper(retro24, instructionInfoConfig));
+		this.memoryLogger = new ObservableLogger<MemoryDumpLogger>(new MemoryDumpLogger(new MemoryDumper(retro24, memoryDumpConfig)));
+		this.instructionLogger = new ObservableLogger<InstructionLogger>(new InstructionLogger(new InstructionDumper(retro24, instructionInfoConfig)));
 		updateView();
 	}
 	
@@ -74,6 +80,9 @@ public class ScreenViewController {
         updateView();
 	}
 	
+	/**
+	 * 
+	 */
 	public void bindExternalProperties() {
 		try {
 			cpuPausedBP().bindBidirectional(controlPanelController.cpuPausedBP());
@@ -128,6 +137,11 @@ public class ScreenViewController {
 		
 	}
 	
+	/**
+	 * Methode lässt die CPU eine einzelne Instruktion ausführen,
+	 * hierbei wird die Taktrate berücksichtigt, der Thread wartet nach 
+	 * Ausführen der Instruktion, bis die Zeit eines Taktes erreicht ist.
+	 */
 	public void stepCPU() {
 		if (retro24.getCPU().isHalted()) {
 			return;
@@ -150,27 +164,30 @@ public class ScreenViewController {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-        }
-        
+        }   
 	}
 	
+	/**
+	 * Startet das Retro24 System
+	 */
 	public void runSystem() {
 		logTransfer = new Timeline(
 	            new KeyFrame(
 	                Duration.seconds(0.05),
 	                event -> {
-	                	// TODO Nur Update wenn es auch neuen Eintrag in Log gibt:
-	                    Platform.runLater(() -> {
-	                        drainLogs();
-	                    });
+	                	// Nur drain wenn sich was geändert hat:
+	                    if (memoryLogger.changedBP().get() && 
+	                        controlPanelController.memoryDumpCheckBoxBP().get()) {
+	                        drainMemoryLog();
+	                    }
+	                    if (instructionLogger.changedBP().get() && 
+	                        controlPanelController.instructionInfoCheckBoxBP().get()) {
+	                        drainInstructionLog();
+	                    }
 	                }
 	            )
 	        );
 		logTransfer.setCycleCount(Timeline.INDEFINITE);
-		
-		// Wenn die Stage (retro24 screen) geschlossen wird, beende auch die CPU.
-	    // screenView.getStage().setOnCloseRequest((close) -> afterRun());
-		// ist jetzt in der View!
 
 	    // Programm laden:
 	    retro24.loadProgramm(programPath);
@@ -240,7 +257,7 @@ public class ScreenViewController {
 	 */
 	public void drainMemoryLog() {
 		if (!controlPanelController.memoryDumpCheckBoxBP().get()) return;
-		memoryLogger.drainTo(memoryLogObs);
+		memoryLogger.transferLogTo(memoryLogObs);
 	}
 	
 	/**
@@ -249,7 +266,7 @@ public class ScreenViewController {
 	 */
 	public void drainInstructionLog() {
 		if (!controlPanelController.instructionInfoCheckBoxBP().get()) return;
-		instructionLogger.drainTo(instructionLogObs);
+		instructionLogger.transferLogTo(instructionLogObs);
 	}
 	
 	public GraphicChip getGraphicChip() {

@@ -53,8 +53,11 @@ public enum Instruction {
 
 	// RAR ($03, 1-Byte-OP): R1/R2 werden ins AR kopiert.
 	RAR("RAR", 0x03, (cpu) -> {
-
+		
+		// TESTWEISE mal drehen OBEN IST ORIGINAL:
 		short newAR = twoByteToShort(cpu.getR2(), cpu.getR1());
+		// FALSCHHERUM, ABER HABEN MANCHE RETRO EVTL SO: 
+		// short newAR = twoByteToShort(cpu.getR1(), cpu.getR2());
 		cpu.setAR(newAR);
 
 		return new byte[0];
@@ -223,9 +226,14 @@ public enum Instruction {
 		byte highByte = ARbytes[0];
 		byte lowByte = ARbytes[1];
 		
+		// TESTWEISE mal drehen OBEN IST ORIGINAL:
+		
 		cpu.setR1(lowByte);
 		cpu.setR2(highByte);
 		
+		// FALSCHHERUM! ABER IST IN MANCHEN RETRO SO:
+		//cpu.setR1(highByte);
+		//cpu.setR2(lowByte);
 		return new byte[0];
 	}),
 

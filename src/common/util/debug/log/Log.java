@@ -8,10 +8,9 @@ import java.util.concurrent.LinkedBlockingDeque;
  * Log das Lognachrichten (jedoch maximal MAX_LOG_ENTRIES) enthält.
  */
 public class Log {
-    private static final int MAX_LOG_ENTRIES = 2500;
+    private static final int MAX_LOG_ENTRIES = 100_000;
 
     private final BlockingDeque<String> log = new LinkedBlockingDeque<>(MAX_LOG_ENTRIES);
-
     
     public void drainTo(Collection<String> collection) {
         log.drainTo(collection);
@@ -31,6 +30,6 @@ public class Log {
     
     @Override
     public String toString() {
-    	return String.join(System.lineSeparator(), log);	
+    	return String.join(System.lineSeparator(), log);
     }
 }

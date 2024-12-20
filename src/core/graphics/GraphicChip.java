@@ -120,7 +120,9 @@ public class GraphicChip {
 		retro24.writeMemory(UPDATE_FLAG_ADDRESS, byteFlag);
 	}
 	
-	// ZU TESTZWECKEN MACHT ALLES SCHWARZ
+	/**
+	 * Setzt alle Werte im Videospeicher auf 0x00
+	 */
 	public void resetVidMem() {
 		for (int i = VIDMEM_START; i < VIDMEM_END; i++) {
 			retro24.writeMemory(i, (byte) 0x00);

@@ -36,4 +36,11 @@ public class FilePathValidator {
         File file = new File(pathInQuestion);
         return file.isFile() && file.getName().endsWith(fileExtension);
     }
+    
+    public String getPath() {
+    	return pathInQuestion;
+    }
+    public String getFileExtension() {
+    	return fileExtension;
+    }
 }

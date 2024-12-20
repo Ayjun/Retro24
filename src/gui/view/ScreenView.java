@@ -55,10 +55,6 @@ public class ScreenView {
         pause.play();
     }
 
-    public Canvas getCanvas() {
-        return canvas;
-    }
-
     // 0=dunkel, 1=hell ab $E000 und einmal
     // 0=monochrom, 1=farbig ab $F000
     public void updateScreen(byte[] memory) {
@@ -102,6 +98,11 @@ public class ScreenView {
 	public Stage getStage() {
 		return this.retro24Stage;
 	}
+	
+
+    public Canvas getCanvas() {
+        return canvas;
+    }
 } 
 
 

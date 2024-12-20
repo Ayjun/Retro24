@@ -46,7 +46,7 @@
 
 <VBox prefHeight="400.0" prefWidth="640.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="gui.controller.ControlPanelController">
   <children>
-    <AnchorPane maxHeight="-1.0" maxWidth="-1.0" prefHeight="176.0" prefWidth="391.0" VBox.vgrow="ALWAYS">
+    <AnchorPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="-Infinity" minWidth="-Infinity" prefHeight="593.0" prefWidth="852.0" VBox.vgrow="ALWAYS">
       <children>
             <Button fx:id="startButton" layoutX="8.0" layoutY="147.0" mnemonicParsing="false" onMouseClicked="#handleStartButtonClick" prefHeight="50.0" prefWidth="149.0" text="       START" textAlignment="CENTER" />
             <TextField fx:id="pathInputText" layoutX="8.0" layoutY="72.0" onMouseClicked="#handlePathInputTextClick" prefHeight="27.0" prefWidth="747.0" text="Programmpfad" />
@@ -66,8 +66,8 @@
                   <Image url="@304307.png" />
                </image>
             </ImageView>
-            <ListView fx:id="instructionInfoListView" layoutX="3.0" layoutY="223.0" prefHeight="350.0" prefWidth="248.0" visible="false" />
-            <ListView fx:id="memoryDumpListView" layoutX="254.0" layoutY="223.0" prefHeight="350.0" prefWidth="567.0" visible="false" />
+            <ListView fx:id="instructionInfoListView" layoutX="8.0" layoutY="218.0" prefHeight="360.0" prefWidth="265.0" styleClass="list-cell" stylesheets="@styles/list-view-styles.css" />
+            <ListView fx:id="memoryDumpListView" layoutX="281.0" layoutY="218.0" prefHeight="360.0" prefWidth="560.0" styleClass="list-cell" stylesheets="@styles/list-view-styles.css" />
             <TextField fx:id="vonMemoryDumpInput" layoutX="707.0" layoutY="147.0" prefHeight="26.0" prefWidth="117.0" visible="false" />
             <TextField fx:id="bisMemoryDumpInput" layoutX="707.0" layoutY="178.0" prefHeight="26.0" prefWidth="117.0" visible="false" />
             <Text fx:id="vonMemoryDumpText" layoutX="672.0" layoutY="165.0" strokeType="OUTSIDE" strokeWidth="0.0" text="Von:" visible="false" wrappingWidth="29.0" />

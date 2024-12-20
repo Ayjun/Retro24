@@ -30,7 +30,7 @@ public abstract class Logger {
     /**
      * Erhöht den Instruktionszähler um 1.
      */
-    public void incrementInstructionCounter() {
+    protected void incrementInstructionCounter() {
         instructionCounter++;
     }
 }

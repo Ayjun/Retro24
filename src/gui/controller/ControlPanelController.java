@@ -1,20 +1,15 @@
 package gui.controller;
 
-import static common.util.StringUtil.*;
-
-import common.config.InstructionInfoConfig;
-import common.config.MemoryDumpConfig;
-import common.util.validate.FilePathValidator;
-import common.util.validate.MemoryDumpValidator;
 import core.Retro24;
+import gui.controller.binder.ControlPanelBinder;
 import gui.controller.handler.ControlPanelEventHandler;
+import gui.controller.validator.ControlPanelValidator;
 import gui.view.ControlPanelView;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
-import javafx.collections.ListChangeListener;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
@@ -24,12 +19,16 @@ import javafx.scene.image.ImageView;
 import javafx.scene.text.Text;
 
 /**
+ * Controller der ControlPanelView. Der Controller dient als Vermittler 
+ * zwischen dem Retro24 Control Panel, der View und dem
+ * Retro24 ScreenViewController.
  * @author Eric Schneider
  */
 public class ControlPanelController {
 
-	// Der maximale Speicherbereich der beim Memorydump ausgegeben werden kann
+	// Konstanten
 	public static final int MAXMEMDUMP = 0x1FF;
+	public static final String PROGRAMM_PATH_INPUT_DEFAULT = "Programmpfad";
 	
 	// FXML Attribute (SceneBuilder):
 	@FXML
@@ -65,21 +64,15 @@ public class ControlPanelController {
 	
 	// Referenz auf View:
 	private ControlPanelView controlPanelView;
-	
 	// Referenz auf ScreenViewController:
 	private ScreenViewController screenViewController;
-	
-	// Validators:
-	private MemoryDumpValidator memDumpValidator;
 
 	// BooleanProperties der Checkboxen (beim Start sind sie false):
-	private BooleanProperty instructionInfoCheckBoxBP = new SimpleBooleanProperty(false);
-	private BooleanProperty memoryDumpCheckBoxBP = new SimpleBooleanProperty(false);
-	private BooleanProperty haltCPUCheckBoxBP = new SimpleBooleanProperty(false);
-	
+	private final BooleanProperty instructionInfoCheckBoxBP = new SimpleBooleanProperty(false);
+	private final BooleanProperty memoryDumpCheckBoxBP = new SimpleBooleanProperty(false);
+	private final BooleanProperty haltCPUCheckBoxBP = new SimpleBooleanProperty(false);
 	// BooleanProperty ob die CPU grade im Moment pausiert ist:
-	private BooleanProperty cpuPausedBP = new SimpleBooleanProperty(false);
-
+	private final BooleanProperty cpuPausedBP = new SimpleBooleanProperty(false);
 	// Boolean Property dass die Input-Möglichkeiten des Users freigibt oder sperrt,
 	// dies wird später gebunden an das systemRunningBP des screenViewController.
 	// Läuft das System, sind keine Änderungen möglich. Das inputInactive wird
@@ -87,286 +80,116 @@ public class ControlPanelController {
 	// um zu vermeiden, dass während dieser kurzen Zwischenzeit (start Drücken und bevor
 	// systemRunning) keine Änderungen an den Values wie den Checkboxen erfolgen können, 
 	// da deren Werte teilweise live während des Laufens des Systems abgefragt werden.
-	private BooleanProperty inputInactiveBP = new SimpleBooleanProperty(false);
+	private final BooleanProperty inputInactiveBP = new SimpleBooleanProperty(false);
 	
 	// String Properties:
 	// Properties vonMemoryDumpInput und bisMemoryDumpInput
-	private StringProperty memoryDumpInputFromSP = new SimpleStringProperty();
-	private StringProperty memoryDumpInputToSP = new SimpleStringProperty();
+	private final StringProperty memoryDumpInputFromSP = new SimpleStringProperty();
+	private final StringProperty memoryDumpInputToSP = new SimpleStringProperty();
 	
 	// Property von pathInputText (Dateipfadeingabe)
-	private StringProperty pathInputTextSP = new SimpleStringProperty();
+	private final StringProperty pathInputTextSP = new SimpleStringProperty();
 	
-	// Eventhandler:
+	// Eventhandler (Auslagerung der event-handling Logik des Controllers):
 	private ControlPanelEventHandler eventHandler;
+	// Eventhandler (Auslagerung der binding Logik des Controllers):
+	private ControlPanelBinder binder;
+	// Validator (Auslagerung der validierungs Logik des Controllers):
+	private ControlPanelValidator validator;
 	
 	/**
 	 * Methode die durch javaFX automatisch aufgerufen wird, nachdem das Controller-Objekt
 	 * erstellt wurde. Hier werden Dinge die direkt nach Erzeugung des Objekts nötig sind erledigt.
+	 * 1. TODO Aufnummerieren
 	 */
 	public void initialize() {
-		initStyle();
-		memDumpValidator = new MemoryDumpValidator(Retro24.MEMORY_START, Retro24.MEMORY_END, MAXMEMDUMP);
-		eventHandler = new ControlPanelEventHandler(this);
 		initDefaultValues();
-		bindInternalProperties();
+		
+		// Anlegen von nötigen Komponenten
+		binder = new ControlPanelBinder(this);
+		eventHandler = new ControlPanelEventHandler(this);
+		validator = new ControlPanelValidator(this);
+		
+		// Initialisieren der Komponenten
+		binder.initializeBindings();
+		
 		eventHandler.initializeHandlers();
 	}
 	
 	/**
 	 * Methode zum Erledigen von Aktivitäten nach dem Anlegen des ScreenView Objekts
-	 * aber VOR dem tatsächlichen Start der ScreenView.
+	 * aber VOR dem tatsächlichen Start der ScreenView. Z.B. Initialisierungen
+	 * von Objekten welche externe Abhängigkeiten haben.
 	 */
-	private void runBeforeScreenViewStart() {
+	public void runBeforeScreenViewStart() {
 		// CPU auf Pause setzen falls Haken bei CPU halten:
 		cpuPausedBP().set(haltCPUCheckBoxBP().get());
+		
+		// Die Methode die beim Links-Clicken auf die CPU-Step Taste aussgeführt
+		// werden soll mittels eines CPUStepHandler (funktionales Interface)
+		// erstellen und an den Eventhandler übergeben.
+		// (Erst hier wegen Abhängigkeit Existenz screenViewController)
 		eventHandler.setCpuStepHandler(() -> {
 			screenViewController.stepCPU();
 			screenViewController.drainLogs();
 		});
-		bindExternalProperties();
-		setUpExternalListeners();
+		
+		// Initialisieren von externen Bindings und Listenern
+		binder.bindExternalProperties();
+		binder.initializeExternalListeners();
 	}
 	
 	/**
-	 * Setzen von Style Einstellungen
+	 * Setzten der Felder der View auf initiale Anzeige
 	 */
-	public void initStyle() {
-	    // CSS-Klasse zuweisen
-	    memoryDumpListView.getStyleClass().add("memory-dump-list-view");
-	    instructionInfoListView.getStyleClass().add("memory-dump-list-view");
-	    
-	    // CSS-Datei laden
-	    String cssPath = getClass().getResource("/resources/styles/list-view-styles.css").toExternalForm();
-	    memoryDumpListView.getStylesheets().add(cssPath);
-	    instructionInfoListView.getStylesheets().add(cssPath);
-	}
-	
-	
 	public void initDefaultValues() {
 		vonMemoryDumpInput.setText(String.format("0x%04X",Retro24.PROGRAMM_MEMORYSTART));
 		bisMemoryDumpInput.setText(String.format("0x%04X",Retro24.PROGRAMM_MEMORYSTART + 0xFF));
 	}
-	
-	/**
-	 * Binden von lokalen (in diesem controlPanelController vorhandenen) Properties
-	 */
-	public void bindInternalProperties() {
-		
-		// Die Checkboxen an ihre BooleanProperties binden:
-		memoryDumpCheckBoxBP.bind(memoryDumpCheckBox.selectedProperty());
-		instructionInfoCheckBoxBP.bind(instructionInfoCheckBox.selectedProperty());
-		haltCPUCheckBoxBP.bind(haltCPUCheckBox.selectedProperty()); // Achtung wegen evtl. invertieren!
-		
-		// Die CheckBoxBooleanProperties an ihre Sichtbarkeits-Abängigkeiten binden:
-		// memoryDump Sichtbarkeitsabhängigkeiten:
-		vonMemoryDumpInput.visibleProperty().bind(memoryDumpCheckBoxBP);
-		vonMemoryDumpText.visibleProperty().bind(memoryDumpCheckBoxBP);
-		bisMemoryDumpInput.visibleProperty().bind(memoryDumpCheckBoxBP);
-		bisMemoryDumpText.visibleProperty().bind(memoryDumpCheckBoxBP);
-		memoryDumpListView.visibleProperty().bind(memoryDumpCheckBoxBP);
-		vonMemoryDumpInput.visibleProperty().bind(memoryDumpCheckBoxBP);
-		bisMemoryDumpInput.visibleProperty().bind(memoryDumpCheckBoxBP);
-		// cpuInstruction Sichtbarkeitsabhängigkeiten:
-		instructionInfoListView.visibleProperty().bind(instructionInfoCheckBoxBP);
-		// haltCPU Sichtbarkeitsabhängigkeiten:
-		cpuStepButton.visibleProperty().bind(haltCPUCheckBoxBP);
-		cpuStepButtonImage.visibleProperty().bind(haltCPUCheckBoxBP);
-		einrastenText.visibleProperty().bind(haltCPUCheckBoxBP);
-		
-		// Die InputFelder an ihre StringProperties binden:
-		memoryDumpInputToSP.bind(bisMemoryDumpInput.textProperty());
-		memoryDumpInputFromSP.bind(vonMemoryDumpInput.textProperty());
-		pathInputTextSP.bind(pathInputText.textProperty());
-		
-		// Inaktivität (disableProperty) der Input-Elemente an inputInactiveBP binden
-		haltCPUCheckBox.disableProperty().bind(inputInactiveBP());
-		instructionInfoCheckBox.disableProperty().bind(inputInactiveBP());
-		memoryDumpCheckBox.disableProperty().bind(inputInactiveBP());
-		vonMemoryDumpInput.disableProperty().bind(inputInactiveBP());
-		bisMemoryDumpInput.disableProperty().bind(inputInactiveBP());
-	}
-	
-	/**
-	 * Bindet alle externen Properties (extern = aus anderen Objekten)
-	 */
-	public void bindExternalProperties() {
-		bindExternalPropertiesScreenViewController();
-	}
-	
-	/**
-	 * Binden von externen (im screenViewController vorhandenen) Properties
-	 */
-	public void bindExternalPropertiesScreenViewController() {
-		
-		// Die inputInactiveBP an systemRunningBP aus screenViewController binden s.o. langer Kommentar
-		inputInactiveBP.bind(screenViewController.systemRunningBP());
-		
-		// Die Logs auf die Listview schalten
-		instructionInfoListView.setItems(screenViewController.getInstructionLogObservable());
-		memoryDumpListView.setItems(screenViewController.getMemoryLogObservable());
-	}
-	
-	/**
-	 * Setzen von Listenern mit externen Abhängigkeiten
-	 */
-	public void setUpExternalListeners() {
-		// Listener auf screenViewController.systemRunningBP, 
-		// um das Binding von inputInactiveBP zu entfernen, wenn sich systemRunningBP auf false ändert.
-		// Denn falls wir nochmal den Startknopf drücken muss es wegen inputInactiveBP.set() unbinded sein.
-		screenViewController.systemRunningBP().addListener((obs, oldValue, newValue) -> {
-            if (!newValue) { // Wenn `systemRunningBP` auf `false` wechselt
-                inputInactiveBP.unbind();
-            }
-        });
-		
-		// Listener auf neue Listeneinträge für Autoscroll:
-		// instructionInfo automatisch herunterscrollen
-		instructionInfoListView.getItems().addListener((ListChangeListener<String>) change -> {
-		    tailInstructionListView();
-		});
-		
-		// memoryInfo automatisch herunterscrollen
-		memoryDumpListView.getItems().addListener((ListChangeListener<String>) change -> {
-		    tailMemoryDumpListView();
-		});
-		
-	}
-	
+
 	/**
 	 * Behandelt den Click auf den Start Button im Retro24 ControlPanel
 	 */
 	@FXML 
 	public void handleStartButtonClick() {
-		clearListViews();
-		closeOldScreens();
-		
-		// Vor Validierung input Möglichkeiten deaktivieren (s.o. langer Kommentar)
-		if (inputInactiveBP.isBound()) {
-			inputInactiveBP.unbind();
-		}
-		inputInactiveBP.set(true);
-		
-		// Validieren der Eingaben
-		if (!validateMemoryDump() || !validateProgramPath()) {
-			inputInactiveBP.set(false);
-			return;
-		}
-		
-		// MemoryDumpConfig erstellen:
-		MemoryDumpConfig memoryDumpConfig = makeMemoryDumpConfig();
-		// InstructionInfoConfig erstellen:
-		InstructionInfoConfig instructionInfoConfig = new InstructionInfoConfig(instructionInfoCheckBoxBP().get());
-		
-		// Neuen ScreenViewController (steuert Retro24 Instanz) anlegen:
-		screenViewController = new ScreenViewController(this, pathInputTextSP().get(), memoryDumpConfig, instructionInfoConfig);
-		
-		runBeforeScreenViewStart();
-		
-		// Bildschirm des Retro24 anzeigen:
-		screenViewController.showScreen();
-	}
-	
-	private MemoryDumpConfig makeMemoryDumpConfig() {
-		int startAddress = hexStringToInt(memoryDumpInputFromSP().get());
-		int endAddress = hexStringToInt(memoryDumpInputToSP().get());
-		return new MemoryDumpConfig(memoryDumpCheckBoxBP.get(), startAddress, endAddress);
-	}
-	
-	/**
-	 * Prüft die Addressen für den Memory Dump auf Gültigkeit.
-	 * @return true wenn gültig, sonst false
-	 */
-	private boolean validateMemoryDump() {
-		try {
-			int startAddress = hexStringToInt(memoryDumpInputFromSP().get());
-			int endAddress = hexStringToInt(memoryDumpInputToSP().get());
-			
-			if (!memDumpValidator.validateAddress(startAddress)) {
-				controlPanelView.showError("Ungültige Startaddresse!",
-						"Die Startaddresse liegt außerhalb des gültigen Bereichs.");
-				return false;
-			}
-			
-			if (!memDumpValidator.validateAddress(endAddress)) {
-				controlPanelView.showError("Ungültige Endaddresse!",
-						"Die Endaddresse liegt außerhalb des gültigen Bereichs.");
-				return false;
-			}
-			
-			if (!memDumpValidator.validateAddressRange(startAddress, endAddress)) {
-				controlPanelView.showError("Ungültiger Addressbereich!",
-						"Der gewählte Addressbereich ist zu groß oder ungültig." + System.lineSeparator() +
-						"Der Addresbereich darf maximal " + String.format("0x%04X", memDumpValidator.getMaxRange())  + 
-						" groß sein.");
-				return false;
-			}
-		}
-		catch (IllegalArgumentException e) {
-			controlPanelView.showError("Ungültige Addresse!",
-					"Bitte Zahlenwerte in hexadezimal Schreibweise (0x) verwenden." + System.lineSeparator() +
-					"Bsp.: 0x1ABC");
-			return false;
-		}
-
-		return true;
-	}
-	
-	/**
-	 * Prüft den im Input Feld angegebenen Programmpfad auf Gültigkeit.
-	 * @return true wenn gültig, sonst false
-	 */
-	private boolean validateProgramPath() {
-		FilePathValidator filePathValidator = new FilePathValidator(pathInputTextSP().get(), Retro24.SUPPORTED_FILE_EXTENSION);
-		try {
-			return filePathValidator.validate();
-		} catch (IllegalArgumentException e) {
-			controlPanelView.showError("Ungültige Datei!", "Die Datei konnte nicht gefunden werden, oder ist nicht unterstützt.");
-			return false;
-		}
-	}
-
-
-	/**
-	 * Wenn es bereits einen screenViewController gab, schließe seine ScreenView
-	 * und lösche die Referenz.
-	 */
-	public void closeOldScreens() {
-		if (screenViewController == null) {
-			return;
-		}
-		screenViewController.closeScreen();
-		screenViewController = null;
+		eventHandler.handleStartButtonClick();
 	}
 	
 	/**
 	 * Behandelt den Click auf das Pfadeingabefeld im Retro24 ControlPanel
+	 * Falls noch der default Wert eingetragen ist, wird das Feld geleert.
 	 */
 	@FXML
-	boolean pathInputWasClicked = false;
 	public void handlePathInputTextClick() {
-		if (pathInputWasClicked) {
-			return;
-		}
-		pathInputText.setText("");
-		pathInputWasClicked = true;
+		eventHandler.handlePathInputTextClick();
 	}
 	
 	/**
 	 * Behandelt den Click auf ... Button zum Programmpfad suchen
 	 */
 	public void handleLookForFileButtonClick() {
-		String path = controlPanelView.openFileDialog();
-		pathInputText.setText(path);
+		eventHandler.handleLookForFileButtonClick();
 	}
-		
+	
 	/**
-	 * Scrollt in allen ListViews ganz nach unten.
+	 * Leitet eine Error Message weiter an die View,
+	 * diese öffnet einen Errordialog.
+	 * @param title Titel des Errordialog Fensters
+	 * @param message Nachricht im Errordialog Fenster
 	 */
-	public void tail() {
- 		tailMemoryDumpListView();
- 		tailInstructionListView();
- 	}
+	public void showError(String title, String message) {
+		controlPanelView.showError(title, message);
+	}
+	
+	/**
+	 * Ruft die Methode openFileDialog der View auf,
+	 * dies führt zum Öfnnen eines Dateiauswahldiealogs, 
+	 * der zurückgegebene String wird durchgereicht.
+	 * @return der Dateipfad als String
+	 */
+	public String openFileDialog() {
+		return controlPanelView.openFileDialog();
+	}
 	
 	/**
 	 * Scrollt in der memoryDumpListView ganz nach unten
@@ -420,18 +243,8 @@ public class ControlPanelController {
  		instructionInfoListView.getItems().clear();
  	}
  	
- 	public Button getCpuStepButton() {
- 		return cpuStepButton;
- 	}
- 	
- 	public ListView<String> getMemoryDumpListView() {
- 		return memoryDumpListView;
- 	}
- 	
- 	public ListView<String> getInstructionInfoListView() {
- 		return instructionInfoListView;
- 	}
- 	
+ 	// Getter
+
  	public BooleanProperty instructionInfoCheckBoxBP() {
  		return instructionInfoCheckBoxBP;
  	}
@@ -452,23 +265,98 @@ public class ControlPanelController {
  		return inputInactiveBP;
  	}
  	
- 	private StringProperty memoryDumpInputFromSP() {
+ 	public StringProperty memoryDumpInputFromSP() {
  		return memoryDumpInputFromSP;
  	}
  	
- 	private StringProperty memoryDumpInputToSP() {
+ 	public StringProperty memoryDumpInputToSP() {
  		return memoryDumpInputToSP;
  	}
  	
- 	private StringProperty pathInputTextSP() {
+ 	public StringProperty pathInputTextSP() {
  		return pathInputTextSP;
  	}
  	
- 	/**
+ 	public Button getCpuStepButton() {
+ 		return cpuStepButton;
+ 	}
+ 	
+ 	public ListView<String> getMemoryDumpListView() {
+ 		return memoryDumpListView;
+ 	}
+ 	
+ 	public ListView<String> getInstructionInfoListView() {
+ 		return instructionInfoListView;
+ 	}
+ 	
+ 	public ImageView getCpuStepButtonImage() {
+		return cpuStepButtonImage;
+	}
+
+	public TextField getVonMemoryDumpInput() {
+		return vonMemoryDumpInput;
+	}
+
+	public TextField getBisMemoryDumpInput() {
+		return bisMemoryDumpInput;
+	}
+
+	public Text getVonMemoryDumpText() {
+		return vonMemoryDumpText;
+	}
+
+	public Text getBisMemoryDumpText() {
+		return bisMemoryDumpText;
+	}
+
+	public Text getEinrastenText() {
+		return einrastenText;
+	}
+	
+	public Button getStartButton() {
+		return startButton;
+	}
+
+	public Button getLookForFileButton() {
+		return lookForFileButton;
+	}
+
+	public CheckBox getInstructionInfoCheckBox() {
+		return instructionInfoCheckBox;
+	}
+
+	public CheckBox getMemoryDumpCheckBox() {
+		return memoryDumpCheckBox;
+	}
+
+	public CheckBox getHaltCPUCheckBox() {
+		return haltCPUCheckBox;
+	}
+
+	public ScreenViewController getScreenViewController() {
+		return screenViewController;
+	}
+
+	public TextField getPathInputText() {
+		return pathInputText;
+	}
+
+ 	public ControlPanelValidator getValidator() {
+		return validator;
+	}
+ 	
+	// Setter
+
+	/**
  	 * Übergibt die controlPanelView Referenz an dieses Objekt (den ControlPanelController).
  	 * @param controlPanelView
  	 */
+ 	
 	public void setControlPanelView(ControlPanelView controlPanelView) {
 		this.controlPanelView = controlPanelView;
+	}
+
+	public void setScreenViewController(ScreenViewController screenViewController) {
+		this.screenViewController = screenViewController;
 	}
 }

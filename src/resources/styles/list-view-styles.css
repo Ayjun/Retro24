@@ -1,12 +1,15 @@
-.memory-dump-list-view {
+.list-view {
     -fx-font-family: 'monospace' !important;
     -fx-font-size: 13px !important;
+    -fx-padding: 5px;
+    -fx-border-color: #cccccc;  /* hellgrauer Rand */
+    -fx-border-width: 1px;
 }
 
-.memory-dump-list-view .list-cell {
+.list-view .list-cell {
     -fx-background-color: white !important;
 }
 
-.memory-dump-list-view .list-cell:empty {
+.list-view .list-cell:empty {
     -fx-background-color: white !important;
 }
