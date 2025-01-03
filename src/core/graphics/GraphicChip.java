@@ -15,6 +15,8 @@ import core.Retro24;
 public class GraphicChip {
 	
 	public static final int UPDATE_FLAG_ADDRESS = 0x000A; // Speicheradresse des Update Flags
+	public static final int IO_PAGE_START = 0x0000;
+	public static final int IO_PAGE_END = 0x00FF;
 	public static final int VIDMEM_START = 0xE000; // Speicheradresse wo der Videospeicher beginnt
 	public static final int VIDMEM_END = 0xFFFF; // Speicheradresse wo der Videospeicher endet
 	public static final int VIDMEM_DARK_LIGHT_START = VIDMEM_START;

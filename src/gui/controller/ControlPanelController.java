@@ -351,7 +351,6 @@ public class ControlPanelController {
  	 * Übergibt die controlPanelView Referenz an dieses Objekt (den ControlPanelController).
  	 * @param controlPanelView
  	 */
- 	
 	public void setControlPanelView(ControlPanelView controlPanelView) {
 		this.controlPanelView = controlPanelView;
 	}

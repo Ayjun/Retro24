@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.util.Arrays;
 
 import core.CPU.CPU;
+import core.IO.IOChip;
 import core.graphics.GraphicChip;
 
 /**
@@ -25,6 +26,7 @@ public class Retro24 {
 	private byte[] memory;
 	private CPU cpu;
 	private GraphicChip graphicChip;
+	private IOChip ioChip;
 
 	/**
 	 * Initialisert das System und alle Komponenten
@@ -46,6 +48,8 @@ public class Retro24 {
 		
 		graphicChip = new GraphicChip(this);
 		graphicChip.init();
+		
+		ioChip = new IOChip(this);
 	}
 
     /**
@@ -217,5 +221,9 @@ public class Retro24 {
      */
     public GraphicChip getGraphicChip() {
     	return graphicChip;
+    }
+    
+    public IOChip getIOChip() {
+    	return ioChip;
     }
 }

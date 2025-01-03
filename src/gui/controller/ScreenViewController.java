@@ -7,6 +7,7 @@ import common.util.debug.log.InstructionLogger;
 import common.util.debug.log.MemoryDumpLogger;
 import common.util.debug.log.MemoryDumper;
 import core.Retro24;
+import core.IO.IOChip;
 import core.graphics.GraphicChip;
 import gui.util.debug.log.ObservableLogger;
 import gui.view.ScreenView;
@@ -18,6 +19,7 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
+import javafx.scene.input.KeyEvent;
 import javafx.util.Duration;
 
 /**
@@ -30,7 +32,7 @@ public class ScreenViewController {
 	/**
 	 * Die CPU-Frequenz in Hz
 	 */
-	public static final int CPUFREQUENCY = 100;
+	public static final int CPUFREQUENCY = 1000;
 	
 	private final Retro24 retro24;
 	private final ControlPanelController controlPanelController;
@@ -52,6 +54,13 @@ public class ScreenViewController {
 	// ObservableLists, diese werden in den ListViews im Retro24 Control Panel angezeigt.
 	private ObservableList<String> memoryLogObs = FXCollections.observableArrayList();
 	private ObservableList<String> instructionLogObs = FXCollections.observableArrayList();
+	
+	// Properties der Joystick Tasten
+	private BooleanProperty joystickUpBP = new SimpleBooleanProperty(false);
+	private BooleanProperty joystickDownBP = new SimpleBooleanProperty(false);
+	private BooleanProperty joystickRightBP = new SimpleBooleanProperty(false);
+	private BooleanProperty joystickLeftBP = new SimpleBooleanProperty(false);
+	private BooleanProperty joystickFireBP = new SimpleBooleanProperty(false);
 	
 	/**
 	 * Konstruktor des ScreenViewController
@@ -103,7 +112,7 @@ public class ScreenViewController {
 	
 	
 	/**
-	 * Wird nach dem Systemstart ausgeführt
+	 * Wird nach dem Systemende ausgeführt
 	 */
 	public void afterRun() {
 		systemRunningBP.set(false);
@@ -153,10 +162,10 @@ public class ScreenViewController {
         retro24.runNextInstruction();
         updateView();
         updateLogs();
+        updateIO();
 
         long elapsedTime = System.nanoTime() - cycleStartTime; // Verstrichene Zeit in Nanosekunden
         long sleepTime = targetCycleDurationNanos - elapsedTime; // Verbleibende Zeit berechnen
-        
         if (sleepTime > 0) {
             try {
 				Thread.sleep(sleepTime / 1_000_000, (int) (sleepTime % 1_000_000));
@@ -214,6 +223,35 @@ public class ScreenViewController {
 	    systemThread.setDaemon(true); // Beende den Thread automatisch beim Schließen der App
 	    systemThread.start();
 	    logTransfer.play();
+	}
+	
+	private void updateIO() {
+		
+		// Bit 0 ist 1 wenn „oben“, 
+		// Bit 1 ist 1 wenn „unten“, 
+		// Bit 2 ist 1 wenn „links“, 
+		// Bit 3 ist 1 wenn „rechts“, 
+		// Bit 4 ist 1 wenn „Feuer“
+		
+		byte joystickByte = 0x00;
+		
+		if (joystickUpBP().get()) {
+			joystickByte = (byte) (joystickByte | IOChip.JOYSTICK_UP);
+		}
+		if (joystickDownBP().get()) {
+			joystickByte = (byte) (joystickByte | IOChip.JOYSTICK_DOWN);
+		}
+		if (joystickLeftBP().get()) {
+			joystickByte = (byte) (joystickByte | IOChip.JOYSTICK_LEFT);
+		}
+		if (joystickRightBP().get()) {
+			joystickByte = (byte) (joystickByte | IOChip.JOYSTICK_RIGHT);
+		}
+		if (joystickFireBP().get()) {
+			joystickByte = (byte) (joystickByte | IOChip.JOYSTICK_FIRE);
+		}
+		
+		retro24.getIOChip().writeJoystickMovement(joystickByte);
 	}
 	
 	/**
@@ -287,5 +325,25 @@ public class ScreenViewController {
 	
 	public BooleanProperty cpuPausedBP() {
 		return cpuPausedBP;
+	}
+	
+	public BooleanProperty joystickUpBP() {
+		return joystickUpBP;
+	}
+	
+	public BooleanProperty joystickDownBP() {
+		return joystickDownBP;
+	}
+	
+	public BooleanProperty joystickRightBP() {
+		return joystickRightBP;
+	}
+	
+	public BooleanProperty joystickLeftBP() {
+		return joystickLeftBP;
+	}
+	
+	public BooleanProperty joystickFireBP()	{
+		return joystickFireBP;
 	}
 }

@@ -46,8 +46,13 @@ public enum Instruction {
 
 		// highbyte ist an bytes[0] lowbyte an bytes[1]
 		// nutze daher Decrementing um das lowByte zuerst zu schreiben
+		
+		// TESTWEISE mal drehen OBEN IST ORIGINAL:
 		cpu.writeToARDecrementing(bytes);
-
+		
+		// FALSCHHERUM, ABER HABEN MANCHE RETRO EVTL SO: 
+		// cpu.writeToARIncrementing(bytes);
+		
 		return new byte[0];
 	}),
 
@@ -55,9 +60,10 @@ public enum Instruction {
 	RAR("RAR", 0x03, (cpu) -> {
 		
 		// TESTWEISE mal drehen OBEN IST ORIGINAL:
-		short newAR = twoByteToShort(cpu.getR2(), cpu.getR1());
+		short newAR = twoByteToShort(cpu.getR2(), cpu.getR1()); // ORIG
 		// FALSCHHERUM, ABER HABEN MANCHE RETRO EVTL SO: 
 		// short newAR = twoByteToShort(cpu.getR1(), cpu.getR2());
+		
 		cpu.setAR(newAR);
 
 		return new byte[0];
@@ -228,12 +234,12 @@ public enum Instruction {
 		
 		// TESTWEISE mal drehen OBEN IST ORIGINAL:
 		
-		cpu.setR1(lowByte);
-		cpu.setR2(highByte);
+		cpu.setR1(lowByte); // Orig
+		cpu.setR2(highByte); // Orig
 		
 		// FALSCHHERUM! ABER IST IN MANCHEN RETRO SO:
-		//cpu.setR1(highByte);
-		//cpu.setR2(lowByte);
+		// cpu.setR1(highByte);
+		// cpu.setR2(lowByte);
 		return new byte[0];
 	}),
 
@@ -246,8 +252,14 @@ public enum Instruction {
 	
 	// MRW ($18, 3-Byte-OP): Die nachfolgenden 2 Bytes werden nach R1 und R2 geschrieben.
 	MRW("MR0", 0x18, (cpu) -> {
-		byte R1 = cpu.getOpcodeArgument(0);
-		byte R2 = cpu.getOpcodeArgument(1);
+		
+		// TESTWEISE mal drehen OBEN IST ORIGINAL:
+		byte R1 = cpu.getOpcodeArgument(0); // ORIG
+		byte R2 = cpu.getOpcodeArgument(1);	// ORIG
+		
+		// FALSCHHERUM! ABER IST IN MANCHEN RETRO SO:
+		// byte R1 = cpu.getOpcodeArgument(1);
+		// byte R2 = cpu.getOpcodeArgument(0);
 		
 		cpu.setR1(R1);
 		cpu.setR2(R2);
